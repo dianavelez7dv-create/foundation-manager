@@ -787,7 +787,7 @@
     <label>Dirección</label>
     <input id="censoDireccion" placeholder="Ej. Calle 5 #12, frente a la iglesia">
     <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-      <button class="icon-btn" onclick="obtenerGPS()" id="btnGPS" style="white-space:nowrap;">📍 Obtener GPS</button>
+      <button type="button" class="icon-btn" onclick="obtenerGPS()" id="btnGPS" style="white-space:nowrap;">📍 Obtener GPS</button>
       <span id="gpsStatus" class="muted" style="font-size:12px;"></span>
     </div>
     <div id="gpsInstrucciones" style="display:none; background:#fff3e0; border-radius:10px; padding:12px; margin-top:8px; font-size:13px; border-left:4px solid var(--accent);">
@@ -2214,6 +2214,11 @@ document.addEventListener('click', function(e){
 });
 
 /* ---------- GPS GENÉRICO ---------- */
+// Mantener compatibilidad con el botón del censo
+function obtenerGPS(){
+  obtenerGPSGenerico('btnGPS','gpsStatus','censoLat','censoLng','gpsInstrucciones');
+}
+
 function obtenerGPSGenerico(btnId, statusId, latId, lngId, instruccionesId){
   const btn = document.getElementById(btnId);
   const status = document.getElementById(statusId);
