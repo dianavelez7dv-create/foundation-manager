@@ -553,7 +553,17 @@
     <input id="donanteNegocio" placeholder="Ej. Supermercado El Sol">
     <label>Dirección física</label>
     <input id="donanteDireccionFisica" placeholder="Ej. Calle Principal #123">
-    <div id="gpsDonanteBloque"></div>
+    <div id="gpsDonanteBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('donanteDireccionFisica','bDirDon','stGpsDon','donLat','donLng')" id="bDirDon" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsDon','stGpsDon','donLat','donLng','insGpsDon')" id="btnGpsDon" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsDon" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="donLat"><input type="hidden" id="donLng">
+      <div id="insGpsDon" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Dirección postal</label>
     <input id="donanteDireccionPostal" placeholder="Ej. PO Box 456, San Juan, PR">
     <label>Tipo de donación</label>
@@ -602,7 +612,17 @@
     <input id="voluntarioNombre" placeholder="Ej. Carlos Pérez">
     <label>Dirección completa</label>
     <input id="voluntarioDireccion" placeholder="Ej. Calle 5, Urb. Las Flores, San Juan">
-    <div id="gpsVoluntarioBloque"></div>
+    <div id="gpsVoluntarioBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('voluntarioDireccion','bDirVol','stGpsVol','volLat','volLng')" id="bDirVol" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsVol','stGpsVol','volLat','volLng','insGpsVol')" id="btnGpsVol" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsVol" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="volLat"><input type="hidden" id="volLng">
+      <div id="insGpsVol" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Disponibilidad de horarios</label>
     <input id="voluntarioDisponibilidad" placeholder="Ej. Fines de semana, tardes">
     <label>Fundación a la que pertenece o desea pertenecer</label>
@@ -662,7 +682,17 @@
     <input id="solicitudApodo" placeholder="Ej. Juanito">
     <label>Dirección física</label>
     <input id="solicitudDireccionFisica" placeholder="Ej. Calle 5, Sector Los Pinos">
-    <div id="gpsSolicitudBloque"></div>
+    <div id="gpsSolicitudBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('solicitudDireccionFisica','bDirSol','stGpsSol','solLat','solLng')" id="bDirSol" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsSol','stGpsSol','solLat','solLng','insGpsSol')" id="btnGpsSol" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsSol" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="solLat"><input type="hidden" id="solLng">
+      <div id="insGpsSol" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Dirección postal</label>
     <input id="solicitudDireccionPostal" placeholder="Ej. PO Box 123, San Juan, PR">
     <label>¿Qué solicita?</label>
@@ -698,7 +728,17 @@
     <input id="proveedorNegocio" placeholder="Ej. Ferretería Central">
     <label>Dirección física</label>
     <input id="proveedorDireccionFisica" placeholder="Ej. Ave. Principal #45">
-    <div id="gpsProveedorBloque"></div>
+    <div id="gpsProveedorBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('proveedorDireccionFisica','bDirProv','stGpsProv','provLat','provLng')" id="bDirProv" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsProv','stGpsProv','provLat','provLng','insGpsProv')" id="btnGpsProv" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsProv" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="provLat"><input type="hidden" id="provLng">
+      <div id="insGpsProv" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Dirección postal</label>
     <input id="proveedorDireccionPostal" placeholder="Ej. PO Box 789, San Juan, PR">
     <label>Productos / servicios que ofrece</label>
@@ -733,7 +773,17 @@
     <input id="directorioTelefono" type="tel" placeholder="Ej. 787-000-0000">
     <label>Dirección (opcional)</label>
     <input id="directorioDireccion" placeholder="Ej. Calle Principal #1">
-    <div id="gpsDirectorioBloque"></div>
+    <div id="gpsDirectorioBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('directorioDireccion','bDirDir','stGpsDir','dirLat','dirLng')" id="bDirDir" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsDir','stGpsDir','dirLat','dirLng','insGpsDir')" id="btnGpsDir" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsDir" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="dirLat"><input type="hidden" id="dirLng">
+      <div id="insGpsDir" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Email (opcional)</label>
     <input id="directorioEmail" type="email" placeholder="Ej. info@agencia.gov">
     <label>Comentarios</label>
@@ -842,7 +892,17 @@
     <input id="censoFundacionPueblo" list="listaPueblosPR" placeholder="Ej. Ponce">
     <label>Barrio / Sector</label>
     <input id="censoFundacionBarrio" placeholder="Ej. Sector Sur">
-    <div id="gpsCensoFundacionBloque"></div>
+    <div id="gpsCensoFundacionBloque">
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+        <button type="button" class="icon-btn" onclick="buscarDireccion('censoFundacionBarrio','bDirCF','stGpsCF','cfLat','cfLng')" id="bDirCF" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+        <button type="button" class="icon-btn" onclick="obtenerGPSGenerico('btnGpsCF','stGpsCF','cfLat','cfLng','insGpsCF')" id="btnGpsCF" style="white-space:nowrap;">📍 GPS actual</button>
+      </div>
+      <span id="stGpsCF" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
+      <input type="hidden" id="cfLat"><input type="hidden" id="cfLng">
+      <div id="insGpsCF" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+        📱 Toca 🔒 en Chrome → Permisos → Ubicación → Permitir
+      </div>
+    </div>
     <label>Teléfono</label>
     <input id="censoFundacionTelefono" type="tel" placeholder="Ej. 787-000-0000">
     <label>WhatsApp</label>
@@ -1166,7 +1226,6 @@ function abrirModalDonante(id){
   document.getElementById('donanteDocumentos').value = 'No';
   document.getElementById('tituloModalDonante').textContent = 'Nuevo donante';
   toggleDonanteCategoria();
-  document.getElementById('gpsDonanteBloque').innerHTML = bloqueGPS('btnGpsDon','stGpsDon','donLat','donLng','insGpsDon','donanteDireccionFisica');
 
   if(id){
     const d = data.donantes.find(x=>x.id===id);
@@ -1314,7 +1373,6 @@ function abrirModalVoluntario(id){
   document.getElementById('voluntarioHoras').value = '';
   document.getElementById('voluntarioNotas').value = '';
   document.getElementById('tituloModalVoluntario').textContent = 'Nuevo voluntario';
-  document.getElementById('gpsVoluntarioBloque').innerHTML = bloqueGPS('btnGpsVol','stGpsVol','volLat','volLng','insGpsVol','voluntarioDireccion');
 
   if(id){
     const v = data.voluntarios.find(x=>x.id===id);
@@ -1860,7 +1918,6 @@ function abrirModalSolicitud(id){
   document.getElementById('solicitudEstado').value = 'Pendiente';
   document.getElementById('solicitudComentarios').value = '';
   document.getElementById('tituloModalSolicitud').textContent = 'Nueva solicitud';
-  document.getElementById('gpsSolicitudBloque').innerHTML = bloqueGPS('btnGpsSol','stGpsSol','solLat','solLng','insGpsSol','solicitudDireccionFisica');
 
   if(id){
     const s = data.solicitudes.find(x=>x.id===id);
@@ -1992,7 +2049,6 @@ function abrirModalProveedor(id){
   document.getElementById('proveedorEmail').value = '';
   document.getElementById('proveedorComentarios').value = '';
   document.getElementById('tituloModalProveedor').textContent = 'Nuevo proveedor';
-  document.getElementById('gpsProveedorBloque').innerHTML = bloqueGPS('btnGpsProv','stGpsProv','provLat','provLng','insGpsProv','proveedorDireccionFisica');
 
   if(id){
     const p = data.proveedores.find(x=>x.id===id);
@@ -2103,7 +2159,6 @@ function abrirModalDirectorio(id){
   document.getElementById('directorioEmail').value = '';
   document.getElementById('directorioComentarios').value = '';
   document.getElementById('tituloModalDirectorio').textContent = 'Nueva agencia';
-  document.getElementById('gpsDirectorioBloque').innerHTML = bloqueGPS('btnGpsDir','stGpsDir','dirLat','dirLng','insGpsDir','directorioDireccion');
 
   if(id){
     const d = data.directorio.find(x=>x.id===id);
@@ -2310,13 +2365,11 @@ function bloqueGPS(btnId, statusId, latId, lngId, instrucId, campoDir){
     </div>`;
 }
 
-function limpiarBloqueGPS(btnId, statusId, latId, lngId, instrucId){
-  const btn = document.getElementById(btnId);
-  if(btn){ btn.textContent = '📍 Obtener GPS'; btn.disabled = false; }
-  const st = document.getElementById(statusId); if(st) st.textContent = '';
-  const la = document.getElementById(latId); if(la) la.value = '';
-  const ln = document.getElementById(lngId); if(ln) ln.value = '';
-  const ins = document.getElementById(instrucId); if(ins) ins.style.display = 'none';
+function limpiarBloqueGPS(btnId, statusId, latId, lngId){
+  const btn = document.getElementById(btnId); if(btn){ btn.textContent = btn.textContent.includes('Buscar')?'🔍 Buscar dirección':'📍 GPS actual'; btn.disabled=false; }
+  const st = document.getElementById(statusId); if(st) st.textContent='';
+  const la = document.getElementById(latId); if(la) la.value='';
+  const ln = document.getElementById(lngId); if(ln) ln.value='';
 }
 
 function cargarBloqueGPS(btnId, statusId, latId, lngId, lat, lng){
@@ -2544,7 +2597,6 @@ function abrirModalCensoFundacion(id){
    'censoFundacionTelefono','censoFundacionWhatsapp','censoFundacionTienen',
    'censoFundacionNecesitan','censoFundacionComentarios'].forEach(c=>{ document.getElementById(c).value=''; });
   document.getElementById('tituloModalCensoFundacion').textContent = 'Registrar fundación';
-  document.getElementById('gpsCensoFundacionBloque').innerHTML = bloqueGPS('btnGpsCF','stGpsCF','cfLat','cfLng','insGpsCF','censoFundacionBarrio');
 
   if(id){
     const f = data.censoFundaciones.find(x=>x.id===id);
