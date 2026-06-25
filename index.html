@@ -843,6 +843,13 @@
     <span id="gpsStatus" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
     <input type="hidden" id="censoLat">
     <input type="hidden" id="censoLng">
+    <div id="coordsManualCenso" style="display:none; margin-top:6px;">
+      <label>O entra las coordenadas manualmente</label>
+      <div style="display:flex; gap:6px;">
+        <input placeholder="Latitud (ej. 18.4271)" oninput="document.getElementById('censoLat').value=this.value" style="flex:1;">
+        <input placeholder="Longitud (ej. -66.9908)" oninput="document.getElementById('censoLng').value=this.value" style="flex:1;">
+      </div>
+    </div>
     <div id="gpsInstrucciones" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
       <strong>📱 Activar GPS en Android:</strong><br>
       1️⃣ Toca 🔒 en la barra de Chrome → <strong>Permisos → Ubicación → Permitir</strong><br>
@@ -2275,12 +2282,15 @@ async function buscarDireccion(campoDir, btnId, statusId, latId, lngId){
   const status = document.getElementById(statusId);
   btn.textContent = '⏳ Buscando...';
   btn.disabled = true;
-  status.textContent = 'Buscando dirección...';
+  status.textContent = 'Buscando...';
 
   try{
     const query = encodeURIComponent(direccion + ', Puerto Rico');
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
-      headers: { 'Accept-Language': 'es' }
+    const url = 'https://nominatim.openstreetmap.org/search?q=' + query + '&format=json&limit=1&accept-language=es';
+    const res = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'User-Agent': 'FoundationManager/1.0' }
     });
     const json = await res.json();
 
@@ -2289,14 +2299,16 @@ async function buscarDireccion(campoDir, btnId, statusId, latId, lngId){
       const lng = parseFloat(json[0].lon).toFixed(6);
       document.getElementById(latId).value = lat;
       document.getElementById(lngId).value = lng;
-      status.textContent = `✅ Encontrado: ${json[0].display_name.split(',').slice(0,2).join(',')}`;
+      const nombre = json[0].display_name.split(',').slice(0,2).join(',');
+      status.textContent = '✅ ' + nombre;
       btn.textContent = '🔍 Buscar de nuevo';
+      showToast('Dirección encontrada ✅');
     } else {
-      status.textContent = '❌ No se encontró — intenta con más detalles';
+      status.textContent = '❌ No encontrada — intenta con otro nombre';
       btn.textContent = '🔍 Buscar dirección';
     }
   } catch(e){
-    status.textContent = '❌ Error de conexión';
+    status.textContent = '❌ Sin conexión o error — puedes ingresar coordenadas manualmente';
     btn.textContent = '🔍 Buscar dirección';
   }
   btn.disabled = false;
