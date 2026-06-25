@@ -786,20 +786,18 @@
     <input id="censoBarrio" placeholder="Ej. Barrio Obrero, Sector La Playa">
     <label>Dirección</label>
     <input id="censoDireccion" placeholder="Ej. Calle 5 #12, frente a la iglesia">
-    <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-      <button type="button" class="icon-btn" onclick="obtenerGPS()" id="btnGPS" style="white-space:nowrap;">📍 Obtener GPS</button>
-      <span id="gpsStatus" class="muted" style="font-size:12px;"></span>
+    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+      <button type="button" class="icon-btn" id="bDirCenso" onclick="buscarDireccion('censoDireccion','bDirCenso','gpsStatus','censoLat','censoLng')" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+      <button type="button" class="icon-btn" onclick="obtenerGPS()" id="btnGPS" style="white-space:nowrap;">📍 GPS actual</button>
     </div>
-    <div id="gpsInstrucciones" style="display:none; background:#fff3e0; border-radius:10px; padding:12px; margin-top:8px; font-size:13px; border-left:4px solid var(--accent);">
-      <strong>📱 Cómo activar el permiso en Android:</strong><br><br>
-      1️⃣ Toca el ícono 🔒 o ⓘ en la barra de dirección de Chrome<br>
-      2️⃣ Toca <strong>Permisos</strong> → <strong>Ubicación</strong><br>
-      3️⃣ Selecciona <strong>"Permitir"</strong><br>
-      4️⃣ Regresa aquí y toca <strong>"📍 Intentar de nuevo"</strong><br><br>
-      <em>Si no ves el ícono, busca en Ajustes del teléfono → Apps → Chrome → Permisos → Ubicación</em>
-    </div>
+    <span id="gpsStatus" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
     <input type="hidden" id="censoLat">
     <input type="hidden" id="censoLng">
+    <div id="gpsInstrucciones" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
+      <strong>📱 Activar GPS en Android:</strong><br>
+      1️⃣ Toca 🔒 en la barra de Chrome → <strong>Permisos → Ubicación → Permitir</strong><br>
+      2️⃣ Toca <strong>"📍 GPS actual"</strong> de nuevo
+    </div>
     <label>Tipo de caso</label>
     <select id="censoTipo">
       <option value="Encamado">Encamado</option>
@@ -1168,7 +1166,7 @@ function abrirModalDonante(id){
   document.getElementById('donanteDocumentos').value = 'No';
   document.getElementById('tituloModalDonante').textContent = 'Nuevo donante';
   toggleDonanteCategoria();
-  document.getElementById('gpsDonanteBloque').innerHTML = bloqueGPS('btnGpsDon','stGpsDon','donLat','donLng','insGpsDon');
+  document.getElementById('gpsDonanteBloque').innerHTML = bloqueGPS('btnGpsDon','stGpsDon','donLat','donLng','insGpsDon','donanteDireccionFisica');
 
   if(id){
     const d = data.donantes.find(x=>x.id===id);
@@ -1316,7 +1314,7 @@ function abrirModalVoluntario(id){
   document.getElementById('voluntarioHoras').value = '';
   document.getElementById('voluntarioNotas').value = '';
   document.getElementById('tituloModalVoluntario').textContent = 'Nuevo voluntario';
-  document.getElementById('gpsVoluntarioBloque').innerHTML = bloqueGPS('btnGpsVol','stGpsVol','volLat','volLng','insGpsVol');
+  document.getElementById('gpsVoluntarioBloque').innerHTML = bloqueGPS('btnGpsVol','stGpsVol','volLat','volLng','insGpsVol','voluntarioDireccion');
 
   if(id){
     const v = data.voluntarios.find(x=>x.id===id);
@@ -1862,7 +1860,7 @@ function abrirModalSolicitud(id){
   document.getElementById('solicitudEstado').value = 'Pendiente';
   document.getElementById('solicitudComentarios').value = '';
   document.getElementById('tituloModalSolicitud').textContent = 'Nueva solicitud';
-  document.getElementById('gpsSolicitudBloque').innerHTML = bloqueGPS('btnGpsSol','stGpsSol','solLat','solLng','insGpsSol');
+  document.getElementById('gpsSolicitudBloque').innerHTML = bloqueGPS('btnGpsSol','stGpsSol','solLat','solLng','insGpsSol','solicitudDireccionFisica');
 
   if(id){
     const s = data.solicitudes.find(x=>x.id===id);
@@ -1994,7 +1992,7 @@ function abrirModalProveedor(id){
   document.getElementById('proveedorEmail').value = '';
   document.getElementById('proveedorComentarios').value = '';
   document.getElementById('tituloModalProveedor').textContent = 'Nuevo proveedor';
-  document.getElementById('gpsProveedorBloque').innerHTML = bloqueGPS('btnGpsProv','stGpsProv','provLat','provLng','insGpsProv');
+  document.getElementById('gpsProveedorBloque').innerHTML = bloqueGPS('btnGpsProv','stGpsProv','provLat','provLng','insGpsProv','proveedorDireccionFisica');
 
   if(id){
     const p = data.proveedores.find(x=>x.id===id);
@@ -2105,7 +2103,7 @@ function abrirModalDirectorio(id){
   document.getElementById('directorioEmail').value = '';
   document.getElementById('directorioComentarios').value = '';
   document.getElementById('tituloModalDirectorio').textContent = 'Nueva agencia';
-  document.getElementById('gpsDirectorioBloque').innerHTML = bloqueGPS('btnGpsDir','stGpsDir','dirLat','dirLng','insGpsDir');
+  document.getElementById('gpsDirectorioBloque').innerHTML = bloqueGPS('btnGpsDir','stGpsDir','dirLat','dirLng','insGpsDir','directorioDireccion');
 
   if(id){
     const d = data.directorio.find(x=>x.id===id);
@@ -2214,6 +2212,41 @@ document.addEventListener('click', function(e){
 });
 
 /* ---------- GPS GENÉRICO ---------- */
+async function buscarDireccion(campoDir, btnId, statusId, latId, lngId){
+  const direccion = document.getElementById(campoDir).value.trim();
+  if(!direccion){ showToast('⚠️ Escribe una dirección primero'); return; }
+
+  const btn = document.getElementById(btnId);
+  const status = document.getElementById(statusId);
+  btn.textContent = '⏳ Buscando...';
+  btn.disabled = true;
+  status.textContent = 'Buscando dirección...';
+
+  try{
+    const query = encodeURIComponent(direccion + ', Puerto Rico');
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
+      headers: { 'Accept-Language': 'es' }
+    });
+    const json = await res.json();
+
+    if(json && json.length > 0){
+      const lat = parseFloat(json[0].lat).toFixed(6);
+      const lng = parseFloat(json[0].lon).toFixed(6);
+      document.getElementById(latId).value = lat;
+      document.getElementById(lngId).value = lng;
+      status.textContent = `✅ Encontrado: ${json[0].display_name.split(',').slice(0,2).join(',')}`;
+      btn.textContent = '🔍 Buscar de nuevo';
+    } else {
+      status.textContent = '❌ No se encontró — intenta con más detalles';
+      btn.textContent = '🔍 Buscar dirección';
+    }
+  } catch(e){
+    status.textContent = '❌ Error de conexión';
+    btn.textContent = '🔍 Buscar dirección';
+  }
+  btn.disabled = false;
+}
+
 // Mantener compatibilidad con el botón del censo
 function obtenerGPS(){
   obtenerGPSGenerico('btnGPS','gpsStatus','censoLat','censoLng','gpsInstrucciones');
@@ -2261,18 +2294,19 @@ function linkNavegar(lat, lng){
   return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:6px; background:var(--app-color); color:#fff; padding:5px 12px; border-radius:8px; font-size:12px; text-decoration:none; font-weight:600;">🗺️ Navegar</a>`;
 }
 
-function bloqueGPS(btnId, statusId, latId, lngId, instrucId){
+function bloqueGPS(btnId, statusId, latId, lngId, instrucId, campoDir){
   return `
-    <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
-      <button type="button" class="icon-btn" id="${btnId}" onclick="obtenerGPSGenerico('${btnId}','${statusId}','${latId}','${lngId}','${instrucId}')" style="white-space:nowrap;">📍 Obtener GPS</button>
-      <span id="${statusId}" class="muted" style="font-size:12px;"></span>
+    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+      <button type="button" class="icon-btn" id="bDir_${btnId}" onclick="buscarDireccion('${campoDir}','bDir_${btnId}','${statusId}','${latId}','${lngId}')" style="white-space:nowrap; background:#e6f4f0;">🔍 Buscar dirección</button>
+      <button type="button" class="icon-btn" id="${btnId}" onclick="obtenerGPSGenerico('${btnId}','${statusId}','${latId}','${lngId}','${instrucId}')" style="white-space:nowrap;">📍 GPS actual</button>
     </div>
+    <span id="${statusId}" class="muted" style="font-size:12px; display:block; margin-top:4px;"></span>
     <input type="hidden" id="${latId}">
     <input type="hidden" id="${lngId}">
     <div id="${instrucId}" style="display:none; background:#fff3e0; border-radius:10px; padding:10px; margin-top:6px; font-size:12px; border-left:4px solid var(--accent);">
       <strong>📱 Activar GPS en Android:</strong><br>
       1️⃣ Toca 🔒 en la barra de Chrome → <strong>Permisos → Ubicación → Permitir</strong><br>
-      2️⃣ Toca <strong>"📍 Intentar de nuevo"</strong>
+      2️⃣ Toca <strong>"📍 GPS actual"</strong> de nuevo
     </div>`;
 }
 
@@ -2510,7 +2544,7 @@ function abrirModalCensoFundacion(id){
    'censoFundacionTelefono','censoFundacionWhatsapp','censoFundacionTienen',
    'censoFundacionNecesitan','censoFundacionComentarios'].forEach(c=>{ document.getElementById(c).value=''; });
   document.getElementById('tituloModalCensoFundacion').textContent = 'Registrar fundación';
-  document.getElementById('gpsCensoFundacionBloque').innerHTML = bloqueGPS('btnGpsCF','stGpsCF','cfLat','cfLng','insGpsCF');
+  document.getElementById('gpsCensoFundacionBloque').innerHTML = bloqueGPS('btnGpsCF','stGpsCF','cfLat','cfLng','insGpsCF','censoFundacionBarrio');
 
   if(id){
     const f = data.censoFundaciones.find(x=>x.id===id);
