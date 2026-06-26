@@ -266,9 +266,57 @@
 
     <div class="card">
       <h3>⚙️ Configuración de la fundación</h3>
+
       <label>Nombre de la fundación</label>
       <input id="inputOrgName" placeholder="Ej. Fundación Esperanza">
-      <button class="btn" onclick="saveOrgName()">Guardar nombre</button>
+
+      <label>Descripción / Misión</label>
+      <textarea id="inputOrgMision" rows="2" placeholder="Ej. Nuestra misión es ayudar a las familias más necesitadas de Puerto Rico..."></textarea>
+
+      <label>Visión</label>
+      <textarea id="inputOrgVision" rows="2" placeholder="Ej. Ser la fundación líder en ayuda comunitaria de Puerto Rico..."></textarea>
+
+      <label>Dirección física</label>
+      <input id="inputOrgDireccion" placeholder="Ej. Calle Principal #1, Aguadilla, PR">
+
+      <label>Teléfono</label>
+      <input id="inputOrgTelefono" type="tel" placeholder="Ej. 787-000-0000">
+
+      <label>WhatsApp</label>
+      <input id="inputOrgWhatsapp" type="tel" placeholder="Ej. 787-000-0000">
+
+      <label>Email</label>
+      <input id="inputOrgEmail" type="email" placeholder="Ej. info@fundacion.org">
+
+      <label>Página web (opcional)</label>
+      <input id="inputOrgWeb" placeholder="Ej. www.fundacion.org">
+
+      <label>Facebook (opcional)</label>
+      <input id="inputOrgFacebook" placeholder="Ej. facebook.com/mifundacion">
+
+      <label>Instagram (opcional)</label>
+      <input id="inputOrgInstagram" placeholder="Ej. @mifundacion">
+
+      <div style="border-top:1px solid #eee; margin-top:14px; padding-top:14px;">
+        <h3 style="margin-top:0;">📄 Datos legales</h3>
+
+        <label>Número de registro / Incorporación</label>
+        <input id="inputOrgRegistro" placeholder="Ej. 12345-PR">
+
+        <label>EIN (Employer Identification Number)</label>
+        <input id="inputOrgEIN" placeholder="Ej. 00-0000000">
+
+        <label>Estatus 501(c)(3) u otro</label>
+        <input id="inputOrgEstatus" placeholder="Ej. 501(c)(3) aprobado desde 2020">
+
+        <label>Nombre del director / presidente</label>
+        <input id="inputOrgDirector" placeholder="Ej. María Rodríguez">
+
+        <label>Notas legales adicionales</label>
+        <textarea id="inputOrgNotasLegales" rows="2" placeholder="Ej. Documentos archivados en el Departamento de Estado de PR..."></textarea>
+      </div>
+
+      <button class="btn" onclick="saveOrgInfo()">💾 Guardar información</button>
     </div>
 
     <div class="card">
@@ -1462,6 +1510,20 @@ function cerrarModal(id){
 function renderInicio(){
   document.getElementById('orgName').textContent = data.orgName;
   document.getElementById('inputOrgName').value = data.orgName;
+  document.getElementById('inputOrgMision').value = data.orgInfo?.mision || '';
+  document.getElementById('inputOrgVision').value = data.orgInfo?.vision || '';
+  document.getElementById('inputOrgDireccion').value = data.orgInfo?.direccion || '';
+  document.getElementById('inputOrgTelefono').value = data.orgInfo?.telefono || '';
+  document.getElementById('inputOrgWhatsapp').value = data.orgInfo?.whatsapp || '';
+  document.getElementById('inputOrgEmail').value = data.orgInfo?.email || '';
+  document.getElementById('inputOrgWeb').value = data.orgInfo?.web || '';
+  document.getElementById('inputOrgFacebook').value = data.orgInfo?.facebook || '';
+  document.getElementById('inputOrgInstagram').value = data.orgInfo?.instagram || '';
+  document.getElementById('inputOrgRegistro').value = data.orgInfo?.registro || '';
+  document.getElementById('inputOrgEIN').value = data.orgInfo?.ein || '';
+  document.getElementById('inputOrgEstatus').value = data.orgInfo?.estatus || '';
+  document.getElementById('inputOrgDirector').value = data.orgInfo?.director || '';
+  document.getElementById('inputOrgNotasLegales').value = data.orgInfo?.notasLegales || '';
 
   const totalDonado = data.donantes.filter(d=>d.tipo==='Monetaria'||!d.tipo).reduce((s,d)=>s + (Number(d.monto)||0), 0);
   document.getElementById('sumDonaciones').textContent = formatoMoneda(totalDonado).replace('.00','');
@@ -1493,12 +1555,31 @@ function renderInicio(){
   }
 }
 
-function saveOrgName(){
-  const val = document.getElementById('inputOrgName').value.trim();
-  data.orgName = val || 'Mi Fundación';
+function saveOrgInfo(){
+  data.orgName = document.getElementById('inputOrgName').value.trim() || 'Mi Fundación';
+  data.orgInfo = {
+    mision: document.getElementById('inputOrgMision').value.trim(),
+    vision: document.getElementById('inputOrgVision').value.trim(),
+    direccion: document.getElementById('inputOrgDireccion').value.trim(),
+    telefono: document.getElementById('inputOrgTelefono').value.trim(),
+    whatsapp: document.getElementById('inputOrgWhatsapp').value.trim(),
+    email: document.getElementById('inputOrgEmail').value.trim(),
+    web: document.getElementById('inputOrgWeb').value.trim(),
+    facebook: document.getElementById('inputOrgFacebook').value.trim(),
+    instagram: document.getElementById('inputOrgInstagram').value.trim(),
+    registro: document.getElementById('inputOrgRegistro').value.trim(),
+    ein: document.getElementById('inputOrgEIN').value.trim(),
+    estatus: document.getElementById('inputOrgEstatus').value.trim(),
+    director: document.getElementById('inputOrgDirector').value.trim(),
+    notasLegales: document.getElementById('inputOrgNotasLegales').value.trim()
+  };
   guardarDatos();
-  renderInicio();
-  showToast('Nombre guardado ✅');
+  document.getElementById('orgName').textContent = data.orgName;
+  showToast('Información guardada ✅');
+}
+
+function saveOrgName(){
+  saveOrgInfo();
 }
 
 function formatFecha(f){
@@ -3667,7 +3748,11 @@ function verReporteGeneral(){
       <div style="text-align:center; border-bottom:3px solid #0e7c61; padding-bottom:16px; margin-bottom:20px;">
         <div style="font-size:32px;">🌱</div>
         <h2 style="margin:4px 0; color:#0e7c61; font-size:22px;">${escapeHtml(org)}</h2>
-        <h3 style="margin:4px 0; font-size:18px;">📊 Reporte General</h3>
+        ${data.orgInfo?.director ? `<p style="margin:2px 0; color:#6b7d79; font-size:13px;">Director/a: ${escapeHtml(data.orgInfo.director)}</p>` : ''}
+        ${data.orgInfo?.telefono ? `<p style="margin:2px 0; color:#6b7d79; font-size:13px;">📞 ${escapeHtml(data.orgInfo.telefono)}</p>` : ''}
+        ${data.orgInfo?.email ? `<p style="margin:2px 0; color:#6b7d79; font-size:13px;">✉️ ${escapeHtml(data.orgInfo.email)}</p>` : ''}
+        ${data.orgInfo?.ein ? `<p style="margin:2px 0; color:#6b7d79; font-size:13px;">EIN: ${escapeHtml(data.orgInfo.ein)}</p>` : ''}
+        <h3 style="margin:8px 0 4px; font-size:18px;">📊 Reporte General</h3>
         <p style="margin:4px 0; color:#6b7d79; font-size:13px;">Período: ${escapeHtml(periodo)}</p>
         <p style="margin:4px 0; color:#6b7d79; font-size:12px;">Generado: ${ahora}</p>
       </div>
