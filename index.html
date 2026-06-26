@@ -1084,6 +1084,7 @@ const USUARIOS_DEFAULT = [
 ];
 
 let sesionActual = null;
+const USUARIOS_BIN_NAME = 'fm-usuarios';
 
 const PERMISOS = {
   admin:       { verTodo:true,  editar:true,  eliminar:true,  usuarios:true,  reportes:true  },
@@ -1091,26 +1092,69 @@ const PERMISOS = {
   visualizador:{ verTodo:true,  editar:false, eliminar:false, usuarios:false, reportes:true  }
 };
 
-function getUsuarios(){
+async function getUsuarios(){
+  const key = getJsonBinKey();
+  if(!key) return getUsuariosLocal();
+  try{
+    const binId = localStorage.getItem('fm_usuarios_bin_id');
+    if(binId){
+      const res = await fetch(`${JSONBIN_BASE}/${binId}/latest`, {
+        headers:{'X-Master-Key': key}
+      });
+      const json = await res.json();
+      if(json.record?.usuarios) return json.record.usuarios;
+    }
+    return getUsuariosLocal();
+  } catch(e){ return getUsuariosLocal(); }
+}
+
+function getUsuariosLocal(){
   const raw = localStorage.getItem('fm_usuarios');
   if(raw) try{ return JSON.parse(raw); }catch(e){}
   return [...USUARIOS_DEFAULT];
 }
 
-function guardarUsuarios(usuarios){
+async function guardarUsuarios(usuarios){
   localStorage.setItem('fm_usuarios', JSON.stringify(usuarios));
+  const key = getJsonBinKey();
+  if(!key) return;
+  try{
+    const binId = localStorage.getItem('fm_usuarios_bin_id');
+    if(binId){
+      await fetch(`${JSONBIN_BASE}/${binId}`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':key},
+        body: JSON.stringify({usuarios})
+      });
+    } else {
+      const res = await fetch(JSONBIN_BASE, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':USUARIOS_BIN_NAME,'X-Bin-Private':'false'},
+        body: JSON.stringify({usuarios})
+      });
+      const json = await res.json();
+      if(json.metadata?.id) localStorage.setItem('fm_usuarios_bin_id', json.metadata.id);
+    }
+  } catch(e){ console.log('Error sync usuarios:', e); }
 }
 
-function iniciarSesion(){
+async function iniciarSesion(){
   const usuarioId = document.getElementById('loginUsuario').value;
   const clave = document.getElementById('loginClave').value;
   const err = document.getElementById('loginError');
+  const btn = document.querySelector('.login-btn');
 
   if(!usuarioId){ err.textContent='⚠️ Selecciona un usuario'; err.style.display='block'; return; }
   if(!clave){ err.textContent='⚠️ Escribe tu contraseña'; err.style.display='block'; return; }
 
-  const usuarios = getUsuarios();
+  btn.textContent = '⏳ Verificando...';
+  btn.disabled = true;
+
+  const usuarios = await getUsuarios();
   const user = usuarios.find(u=>u.id===usuarioId && u.clave===clave);
+
+  btn.textContent = 'Entrar →';
+  btn.disabled = false;
 
   if(!user){ err.textContent='⚠️ Contraseña incorrecta'; err.style.display='block'; return; }
 
@@ -1127,51 +1171,26 @@ function iniciarSesion(){
 function cerrarSesion(){
   if(!confirm('¿Cerrar sesión?')) return;
   sesionActual = null;
-  localStorage.removeItem('fm_sesion');
   ocultarApp();
   mostrarLogin();
 }
 
-function mostrarLogin(){
-  const usuarios = getUsuarios();
+async function mostrarLogin(){
+  const usuarios = await getUsuarios();
   const sel = document.getElementById('loginUsuario');
   sel.innerHTML = '<option value="">Selecciona un usuario...</option>' +
-    usuarios.map(u=>`<option value="${u.id}">${escapeHtml(u.nombre)} (${escapeHtml(u.rol)})</option>`).join('');
+    usuarios.map(u=>`<option value="${u.id}">${u.nombre} (${u.rol})</option>`).join('');
   document.getElementById('loginScreen').style.display='flex';
-}
-
-function verificarSesion(){
-  const raw = localStorage.getItem('fm_sesion');
-  if(!raw) return false;
-  try{
-    const s = JSON.parse(raw);
-    // Sesión expira en 8 horas
-    if(Date.now() - s.ts > 8 * 60 * 60 * 1000){ localStorage.removeItem('fm_sesion'); return false; }
-    const usuarios = getUsuarios();
-    const user = usuarios.find(u=>u.id===s.id);
-    if(!user) return false;
-    sesionActual = user;
-    return true;
-  }catch(e){ return false; }
 }
 
 function aplicarPermisos(){
   if(!sesionActual) return;
   const p = PERMISOS[sesionActual.rol] || PERMISOS.visualizador;
-  const nombre = sesionActual.nombre;
-  const rol = sesionActual.rol;
-
-  // Header
-  document.getElementById('headerUsuario').textContent = `👤 ${nombre} (${rol})`;
-
-  // FAB — ocultar si no puede editar
-  document.getElementById('fab').style.display = p.editar ? 'flex' : 'none';
-
-  // Tab usuarios — solo admin
+  document.getElementById('headerUsuario').textContent = `👤 ${sesionActual.nombre} (${sesionActual.rol})`;
+  const fab = document.getElementById('fab');
+  if(fab) fab.style.display = p.editar ? 'flex' : 'none';
   const tabUsuarios = document.getElementById('tabUsuarios');
   if(tabUsuarios) tabUsuarios.style.display = p.usuarios ? 'flex' : 'none';
-
-  // Tab reportes — según permiso
   const tabReportes = document.getElementById('tabReportes');
   if(tabReportes) tabReportes.style.display = p.reportes ? 'flex' : 'none';
 }
@@ -1186,55 +1205,52 @@ function puedeEliminar(){
   return PERMISOS[sesionActual.rol]?.eliminar || false;
 }
 
-/* ---------- GESTIÓN DE USUARIOS (solo admin) ---------- */
-function renderUsuarios(){
-  const usuarios = getUsuarios();
+async function renderUsuarios(){
+  const usuarios = await getUsuarios();
   const cont = document.getElementById('listaUsuarios');
   const roles = {admin:'🔑 Admin', voluntario:'🙋 Voluntario', visualizador:'👁️ Visualizador'};
-
-  cont.innerHTML = usuarios.map(u=>`
+  const key = getJsonBinKey();
+  cont.innerHTML = `<p class="muted" style="margin-bottom:10px;">${key ? '✅ Sincronizando con JSONBin' : '⚠️ Sin clave JSONBin — solo local. Configura la clave en 🔄 Sync.'}</p>` +
+  usuarios.map(u=>`
     <div class="item">
-      <div class="item-top">
-        <div>
-          <h3>${escapeHtml(u.nombre)}</h3>
-          <span class="tag">${roles[u.rol]||u.rol}</span>
-          <span class="muted"> · @${escapeHtml(u.usuario)}</span>
-          ${u.id === sesionActual?.id ? '<span class="tag" style="background:#e6f4f0; color:var(--app-color);"> Tú</span>' : ''}
-        </div>
-      </div>
+      <div class="item-top"><div>
+        <h3>${u.nombre}</h3>
+        <span class="tag">${roles[u.rol]||u.rol}</span>
+        <span class="muted"> · @${u.usuario}</span>
+        ${u.id===sesionActual?.id?'<span class="tag" style="background:#e6f4f0;color:var(--app-color);margin-left:4px;">Tú</span>':''}
+      </div></div>
       <div class="item-actions">
         <button class="icon-btn" onclick="editarUsuario('${u.id}')">✏️ Editar</button>
-        ${u.id !== 'u1' ? `<button class="icon-btn danger" onclick="eliminarUsuario('${u.id}')">🗑️</button>` : ''}
+        ${u.id!=='u1'?`<button class="icon-btn danger" onclick="eliminarUsuario('${u.id}')">🗑️</button>`:''}
       </div>
     </div>
   `).join('');
 }
 
 function abrirModalUsuario(id){
-  document.getElementById('usuarioId').value = '';
-  document.getElementById('usuarioNombre').value = '';
-  document.getElementById('usuarioLogin').value = '';
-  document.getElementById('usuarioClave').value = '';
-  document.getElementById('usuarioRol').value = 'voluntario';
-  document.getElementById('tituloModalUsuario').textContent = 'Nuevo usuario';
-
-  if(id){
-    const u = getUsuarios().find(x=>x.id===id);
-    if(u){
-      document.getElementById('usuarioId').value = u.id;
-      document.getElementById('usuarioNombre').value = u.nombre;
-      document.getElementById('usuarioLogin').value = u.usuario;
-      document.getElementById('usuarioClave').value = '';
-      document.getElementById('usuarioRol').value = u.rol;
-      document.getElementById('tituloModalUsuario').textContent = 'Editar usuario';
-    }
-  }
+  document.getElementById('usuarioId').value='';
+  document.getElementById('usuarioNombre').value='';
+  document.getElementById('usuarioLogin').value='';
+  document.getElementById('usuarioClave').value='';
+  document.getElementById('usuarioRol').value='voluntario';
+  document.getElementById('tituloModalUsuario').textContent='Nuevo usuario';
   document.getElementById('modalUsuario').classList.add('active');
 }
 
-function editarUsuario(id){ abrirModalUsuario(id); }
+async function editarUsuario(id){
+  const usuarios = await getUsuarios();
+  const u = usuarios.find(x=>x.id===id);
+  if(!u) return;
+  document.getElementById('usuarioId').value=u.id;
+  document.getElementById('usuarioNombre').value=u.nombre;
+  document.getElementById('usuarioLogin').value=u.usuario;
+  document.getElementById('usuarioClave').value='';
+  document.getElementById('usuarioRol').value=u.rol;
+  document.getElementById('tituloModalUsuario').textContent='Editar usuario';
+  document.getElementById('modalUsuario').classList.add('active');
+}
 
-function guardarUsuario(){
+async function guardarUsuario(){
   const id = document.getElementById('usuarioId').value;
   const nombre = document.getElementById('usuarioNombre').value.trim();
   const usuario = document.getElementById('usuarioLogin').value.trim().toLowerCase();
@@ -1245,36 +1261,35 @@ function guardarUsuario(){
   if(!usuario){ showToast('⚠️ Escribe el nombre de usuario'); return; }
   if(!id && !clave){ showToast('⚠️ Escribe una contraseña'); return; }
 
-  const usuarios = getUsuarios();
+  const btn = document.querySelector('#modalUsuario .btn');
+  btn.textContent='⏳ Guardando...'; btn.disabled=true;
+
+  const usuarios = await getUsuarios();
 
   if(!id){
-    if(usuarios.some(u=>u.usuario===usuario)){ showToast('⚠️ Ese nombre de usuario ya existe'); return; }
-    usuarios.push({ id:'u'+Date.now(), nombre, usuario, clave, rol });
+    if(usuarios.some(u=>u.usuario===usuario)){ showToast('⚠️ Ese usuario ya existe'); btn.textContent='Guardar usuario'; btn.disabled=false; return; }
+    usuarios.push({id:'u'+Date.now(), nombre, usuario, clave, rol});
   } else {
     const idx = usuarios.findIndex(u=>u.id===id);
-    if(idx>=0){
-      usuarios[idx].nombre = nombre;
-      usuarios[idx].usuario = usuario;
-      usuarios[idx].rol = rol;
-      if(clave) usuarios[idx].clave = clave;
-    }
+    if(idx>=0){ usuarios[idx].nombre=nombre; usuarios[idx].usuario=usuario; usuarios[idx].rol=rol; if(clave) usuarios[idx].clave=clave; }
   }
 
-  guardarUsuarios(usuarios);
+  await guardarUsuarios(usuarios);
+  btn.textContent='Guardar usuario'; btn.disabled=false;
   cerrarModal('modalUsuario');
   renderUsuarios();
-  mostrarLogin(); // actualizar lista del login
   showToast('Usuario guardado ✅');
 }
 
-function eliminarUsuario(id){
-  if(id === sesionActual?.id){ showToast('⚠️ No puedes eliminarte a ti mismo'); return; }
+async function eliminarUsuario(id){
+  if(id===sesionActual?.id){ showToast('⚠️ No puedes eliminarte a ti mismo'); return; }
   if(!confirm('¿Eliminar este usuario?')) return;
-  const usuarios = getUsuarios().filter(u=>u.id!==id);
-  guardarUsuarios(usuarios);
+  const usuarios = (await getUsuarios()).filter(u=>u.id!==id);
+  await guardarUsuarios(usuarios);
   renderUsuarios();
   showToast('Usuario eliminado 🗑️');
 }
+
 
 
 /* =========================================================
