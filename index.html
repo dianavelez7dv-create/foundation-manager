@@ -213,15 +213,11 @@
 </div>
 
 
-  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <div>
-      <h1>🌱 FoundationManager</h1>
-      <p id="orgName">Mi Fundación</p>
-    </div>
-    <div style="text-align:right; padding-top:4px;">
-      <div id="headerUsuario" style="color:rgba(255,255,255,.9); font-size:13px; margin-bottom:4px;"></div>
-      <button onclick="cerrarSesion()" style="background:rgba(255,255,255,.2); border:none; color:#fff; padding:6px 12px; border-radius:8px; font-size:13px; cursor:pointer;">🚪 Salir</button>
-    </div>
+  <h1>🌱 FoundationManager</h1>
+  <p id="orgName">Mi Fundación</p>
+  <div id="headerUsuario" style="margin-top:8px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.25); border-radius:10px; padding:8px 12px;">
+    <span id="headerUsuarioNombre" style="color:#ffffff; font-size:15px; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.4);"></span>
+    <button onclick="cerrarSesion()" style="background:#fff; border:none; color:#0e7c61; padding:7px 16px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;">🚪 Salir</button>
   </div>
 </header>
 
@@ -1290,7 +1286,8 @@ async function mostrarLogin(){
 function aplicarPermisos(){
   if(!sesionActual) return;
   const p = PERMISOS[sesionActual.rol] || PERMISOS.visualizador;
-  document.getElementById('headerUsuario').textContent = `👤 ${sesionActual.nombre} (${sesionActual.rol})`;
+  document.getElementById('headerUsuarioNombre').textContent = `👤 ${sesionActual.nombre} · ${sesionActual.rol}`;
+  document.getElementById('headerUsuario').style.display = 'flex';
   const fab = document.getElementById('fab');
   if(fab) fab.style.display = p.editar ? 'flex' : 'none';
   const tabUsuarios = document.getElementById('tabUsuarios');
