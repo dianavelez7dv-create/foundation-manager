@@ -166,9 +166,63 @@
 </head>
 <body>
 
-<header>
-  <h1>🌱 FoundationManager</h1>
-  <p id="orgName">Mi Fundación</p>
+<style>
+  #loginScreen{
+    position:fixed; inset:0; background:linear-gradient(135deg, #0e7c61, #1a9e7c);
+    z-index:1000; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:24px;
+  }
+  #loginScreen h1{color:#fff; font-size:28px; margin:0 0 6px; text-align:center;}
+  #loginScreen p{color:rgba(255,255,255,.85); font-size:16px; margin:0 0 32px; text-align:center;}
+  .login-card{background:#fff; border-radius:20px; padding:24px; width:100%; max-width:380px; box-shadow:0 8px 24px rgba(0,0,0,.15);}
+  .login-card h2{margin:0 0 20px; font-size:22px; color:#0e7c61; text-align:center;}
+  .login-field{margin-bottom:16px;}
+  .login-field label{display:block; font-size:15px; font-weight:600; color:#6b7d79; margin-bottom:6px;}
+  .login-field input, .login-field select{
+    width:100%; padding:14px 16px; border:2px solid #dde6e3; border-radius:12px;
+    font-size:17px; color:#1f2d2a; box-sizing:border-box;
+  }
+  .login-field input:focus, .login-field select:focus{outline:none; border-color:#1a9e7c;}
+  .login-btn{
+    width:100%; padding:16px; background:#0e7c61; color:#fff; border:none;
+    border-radius:12px; font-size:18px; font-weight:700; cursor:pointer; margin-top:8px;
+  }
+  .login-error{color:#e2574c; font-size:14px; text-align:center; margin-top:10px; display:none;}
+  #loginScreen .logo{font-size:56px; margin-bottom:12px;}
+</style>
+
+<div id="loginScreen">
+  <div class="logo">🌱</div>
+  <h1>FoundationManager</h1>
+  <p>Gestión de fundaciones sin fines de lucro</p>
+  <div class="login-card">
+    <h2>🔐 Iniciar sesión</h2>
+    <div class="login-field">
+      <label>Usuario</label>
+      <select id="loginUsuario" onchange="document.getElementById('loginError').style.display='none'">
+        <option value="">Selecciona un usuario...</option>
+      </select>
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginClave" placeholder="••••••••" onkeydown="if(event.key==='Enter') iniciarSesion()">
+    </div>
+    <button class="login-btn" onclick="iniciarSesion()">Entrar →</button>
+    <p class="login-error" id="loginError">⚠️ Usuario o contraseña incorrectos</p>
+  </div>
+</div>
+
+
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1>🌱 FoundationManager</h1>
+      <p id="orgName">Mi Fundación</p>
+    </div>
+    <div style="text-align:right; padding-top:4px;">
+      <div id="headerUsuario" style="color:rgba(255,255,255,.9); font-size:13px; margin-bottom:4px;"></div>
+      <button onclick="cerrarSesion()" style="background:rgba(255,255,255,.2); border:none; color:#fff; padding:6px 12px; border-radius:8px; font-size:13px; cursor:pointer;">🚪 Salir</button>
+    </div>
+  </div>
 </header>
 
 <div class="tabs">
@@ -181,8 +235,9 @@
   <div class="tab" data-view="directorio" onclick="showView('directorio')"><span>📞</span>Directorio</div>
   <div class="tab" data-view="censo" onclick="showView('censo')"><span>🏘️</span>Censo</div>
   <div class="tab" data-view="inventario" onclick="showView('inventario')"><span>📦</span>Inventario</div>
-  <div class="tab" data-view="reportes" onclick="showView('reportes')"><span>📊</span>Reportes</div>
+  <div class="tab" id="tabReportes" data-view="reportes" onclick="showView('reportes')"><span>📊</span>Reportes</div>
   <div class="tab" data-view="sync" onclick="showView('sync')"><span>🔄</span>Sync</div>
+  <div class="tab" id="tabUsuarios" data-view="usuarios" onclick="showView('usuarios')"><span>👥</span>Usuarios</div>
   <div class="tab" data-view="auditoria" onclick="showView('auditoria')"><span>📋</span>Auditoría</div>
 </div>
 
@@ -317,6 +372,13 @@
     <div id="listaAuditoria"></div>
 
     <button class="btn danger" onclick="limpiarAuditoria()" style="margin-top:10px;">🗑️ Limpiar historial</button>
+  </div>
+
+  <!-- USUARIOS -->
+  <div class="view" id="view-usuarios">
+    <h2>👥 Gestión de usuarios</h2>
+    <p class="muted">Solo el administrador puede crear y editar usuarios.</p>
+    <div id="listaUsuarios"></div>
   </div>
 
   <!-- SYNC -->
@@ -540,6 +602,29 @@
 
 <!-- FAB -->
 <button class="fab" id="fab" onclick="abrirModalActual()">+</button>
+
+<!-- MODAL USUARIO -->
+<div class="overlay" id="modalUsuario">
+  <div class="modal">
+    <button class="close-x" onclick="cerrarModal('modalUsuario')">✕</button>
+    <h2 id="tituloModalUsuario">Nuevo usuario</h2>
+    <input type="hidden" id="usuarioId">
+    <label>Nombre completo</label>
+    <input id="usuarioNombre" placeholder="Ej. María Rodríguez">
+    <label>Nombre de usuario (para login)</label>
+    <input id="usuarioLogin" placeholder="Ej. maria" autocomplete="off">
+    <label>Contraseña</label>
+    <input type="password" id="usuarioClave" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    <p class="muted" style="margin-top:2px;">Deja en blanco al editar para mantener la contraseña actual.</p>
+    <label>Rol</label>
+    <select id="usuarioRol">
+      <option value="admin">🔑 Administrador — acceso total</option>
+      <option value="voluntario">🙋 Voluntario — puede registrar y editar</option>
+      <option value="visualizador">👁️ Visualizador — solo puede ver</option>
+    </select>
+    <button class="btn" onclick="guardarUsuario()">Guardar usuario</button>
+  </div>
+</div>
 
 <!-- MODAL DONANTE -->
 <div class="overlay" id="modalDonante">
@@ -991,6 +1076,208 @@
 
 <script>
 /* =========================================================
+   SISTEMA DE USUARIOS Y LOGIN
+   ========================================================= */
+
+const USUARIOS_DEFAULT = [
+  { id:'u1', nombre:'Administrador', usuario:'admin', clave:'admin123', rol:'admin' }
+];
+
+let sesionActual = null;
+
+const PERMISOS = {
+  admin:       { verTodo:true,  editar:true,  eliminar:true,  usuarios:true,  reportes:true  },
+  voluntario:  { verTodo:true,  editar:true,  eliminar:false, usuarios:false, reportes:false },
+  visualizador:{ verTodo:true,  editar:false, eliminar:false, usuarios:false, reportes:true  }
+};
+
+function getUsuarios(){
+  const raw = localStorage.getItem('fm_usuarios');
+  if(raw) try{ return JSON.parse(raw); }catch(e){}
+  return [...USUARIOS_DEFAULT];
+}
+
+function guardarUsuarios(usuarios){
+  localStorage.setItem('fm_usuarios', JSON.stringify(usuarios));
+}
+
+function iniciarSesion(){
+  const usuarioId = document.getElementById('loginUsuario').value;
+  const clave = document.getElementById('loginClave').value;
+  const err = document.getElementById('loginError');
+
+  if(!usuarioId){ err.textContent='⚠️ Selecciona un usuario'; err.style.display='block'; return; }
+  if(!clave){ err.textContent='⚠️ Escribe tu contraseña'; err.style.display='block'; return; }
+
+  const usuarios = getUsuarios();
+  const user = usuarios.find(u=>u.id===usuarioId && u.clave===clave);
+
+  if(!user){ err.textContent='⚠️ Contraseña incorrecta'; err.style.display='block'; return; }
+
+  sesionActual = user;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('loginClave').value='';
+  err.style.display='none';
+  mostrarApp();
+  aplicarPermisos();
+  renderInicio();
+  showView('inicio');
+}
+
+function cerrarSesion(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  sesionActual = null;
+  localStorage.removeItem('fm_sesion');
+  ocultarApp();
+  mostrarLogin();
+}
+
+function mostrarLogin(){
+  const usuarios = getUsuarios();
+  const sel = document.getElementById('loginUsuario');
+  sel.innerHTML = '<option value="">Selecciona un usuario...</option>' +
+    usuarios.map(u=>`<option value="${u.id}">${escapeHtml(u.nombre)} (${escapeHtml(u.rol)})</option>`).join('');
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+function verificarSesion(){
+  const raw = localStorage.getItem('fm_sesion');
+  if(!raw) return false;
+  try{
+    const s = JSON.parse(raw);
+    // Sesión expira en 8 horas
+    if(Date.now() - s.ts > 8 * 60 * 60 * 1000){ localStorage.removeItem('fm_sesion'); return false; }
+    const usuarios = getUsuarios();
+    const user = usuarios.find(u=>u.id===s.id);
+    if(!user) return false;
+    sesionActual = user;
+    return true;
+  }catch(e){ return false; }
+}
+
+function aplicarPermisos(){
+  if(!sesionActual) return;
+  const p = PERMISOS[sesionActual.rol] || PERMISOS.visualizador;
+  const nombre = sesionActual.nombre;
+  const rol = sesionActual.rol;
+
+  // Header
+  document.getElementById('headerUsuario').textContent = `👤 ${nombre} (${rol})`;
+
+  // FAB — ocultar si no puede editar
+  document.getElementById('fab').style.display = p.editar ? 'flex' : 'none';
+
+  // Tab usuarios — solo admin
+  const tabUsuarios = document.getElementById('tabUsuarios');
+  if(tabUsuarios) tabUsuarios.style.display = p.usuarios ? 'flex' : 'none';
+
+  // Tab reportes — según permiso
+  const tabReportes = document.getElementById('tabReportes');
+  if(tabReportes) tabReportes.style.display = p.reportes ? 'flex' : 'none';
+}
+
+function puedeEditar(){
+  if(!sesionActual) return false;
+  return PERMISOS[sesionActual.rol]?.editar || false;
+}
+
+function puedeEliminar(){
+  if(!sesionActual) return false;
+  return PERMISOS[sesionActual.rol]?.eliminar || false;
+}
+
+/* ---------- GESTIÓN DE USUARIOS (solo admin) ---------- */
+function renderUsuarios(){
+  const usuarios = getUsuarios();
+  const cont = document.getElementById('listaUsuarios');
+  const roles = {admin:'🔑 Admin', voluntario:'🙋 Voluntario', visualizador:'👁️ Visualizador'};
+
+  cont.innerHTML = usuarios.map(u=>`
+    <div class="item">
+      <div class="item-top">
+        <div>
+          <h3>${escapeHtml(u.nombre)}</h3>
+          <span class="tag">${roles[u.rol]||u.rol}</span>
+          <span class="muted"> · @${escapeHtml(u.usuario)}</span>
+          ${u.id === sesionActual?.id ? '<span class="tag" style="background:#e6f4f0; color:var(--app-color);"> Tú</span>' : ''}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="editarUsuario('${u.id}')">✏️ Editar</button>
+        ${u.id !== 'u1' ? `<button class="icon-btn danger" onclick="eliminarUsuario('${u.id}')">🗑️</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function abrirModalUsuario(id){
+  document.getElementById('usuarioId').value = '';
+  document.getElementById('usuarioNombre').value = '';
+  document.getElementById('usuarioLogin').value = '';
+  document.getElementById('usuarioClave').value = '';
+  document.getElementById('usuarioRol').value = 'voluntario';
+  document.getElementById('tituloModalUsuario').textContent = 'Nuevo usuario';
+
+  if(id){
+    const u = getUsuarios().find(x=>x.id===id);
+    if(u){
+      document.getElementById('usuarioId').value = u.id;
+      document.getElementById('usuarioNombre').value = u.nombre;
+      document.getElementById('usuarioLogin').value = u.usuario;
+      document.getElementById('usuarioClave').value = '';
+      document.getElementById('usuarioRol').value = u.rol;
+      document.getElementById('tituloModalUsuario').textContent = 'Editar usuario';
+    }
+  }
+  document.getElementById('modalUsuario').classList.add('active');
+}
+
+function editarUsuario(id){ abrirModalUsuario(id); }
+
+function guardarUsuario(){
+  const id = document.getElementById('usuarioId').value;
+  const nombre = document.getElementById('usuarioNombre').value.trim();
+  const usuario = document.getElementById('usuarioLogin').value.trim().toLowerCase();
+  const clave = document.getElementById('usuarioClave').value.trim();
+  const rol = document.getElementById('usuarioRol').value;
+
+  if(!nombre){ showToast('⚠️ Escribe el nombre'); return; }
+  if(!usuario){ showToast('⚠️ Escribe el nombre de usuario'); return; }
+  if(!id && !clave){ showToast('⚠️ Escribe una contraseña'); return; }
+
+  const usuarios = getUsuarios();
+
+  if(!id){
+    if(usuarios.some(u=>u.usuario===usuario)){ showToast('⚠️ Ese nombre de usuario ya existe'); return; }
+    usuarios.push({ id:'u'+Date.now(), nombre, usuario, clave, rol });
+  } else {
+    const idx = usuarios.findIndex(u=>u.id===id);
+    if(idx>=0){
+      usuarios[idx].nombre = nombre;
+      usuarios[idx].usuario = usuario;
+      usuarios[idx].rol = rol;
+      if(clave) usuarios[idx].clave = clave;
+    }
+  }
+
+  guardarUsuarios(usuarios);
+  cerrarModal('modalUsuario');
+  renderUsuarios();
+  mostrarLogin(); // actualizar lista del login
+  showToast('Usuario guardado ✅');
+}
+
+function eliminarUsuario(id){
+  if(id === sesionActual?.id){ showToast('⚠️ No puedes eliminarte a ti mismo'); return; }
+  if(!confirm('¿Eliminar este usuario?')) return;
+  const usuarios = getUsuarios().filter(u=>u.id!==id);
+  guardarUsuarios(usuarios);
+  renderUsuarios();
+  showToast('Usuario eliminado 🗑️');
+}
+
+
+/* =========================================================
    FoundationManager - lógica principal
    Almacenamiento: localStorage
    ========================================================= */
@@ -1112,11 +1399,13 @@ function showView(view){
   if(view === 'censo') renderCenso();
   if(view === 'inventario') renderInventario();
   if(view === 'auditoria') renderAuditoria();
+  if(view === 'usuarios') renderUsuarios();
   if(view === 'sync') renderSync();
   if(view === 'reportes') renderReportes();
 }
 
 function abrirModalActual(){
+  if(!puedeEditar() && vistaActual !== 'usuarios'){ showToast('⚠️ No tienes permiso para agregar'); return; }
   if(vistaActual === 'donantes') abrirModalDonante();
   if(vistaActual === 'voluntarios') abrirModalVoluntario();
   if(vistaActual === 'eventos') abrirModalEvento();
@@ -1125,6 +1414,7 @@ function abrirModalActual(){
   if(vistaActual === 'directorio') abrirModalDirectorio();
   if(vistaActual === 'censo') abrirModalCensoActual();
   if(vistaActual === 'inventario') document.getElementById('modalAccionInventario').classList.add('active');
+  if(vistaActual === 'usuarios') abrirModalUsuario();
 }
 
 function cerrarModal(id){
@@ -3225,9 +3515,32 @@ function importarDatos(event){
 }
 
 /* ---------- INIT ---------- */
-cargarDatos();
-renderListaCategorias();
-showView('inicio');
+document.addEventListener('DOMContentLoaded', function(){
+  cargarDatos();
+  renderListaCategorias();
+  // Siempre pedir login al abrir la app
+  localStorage.removeItem('fm_sesion');
+  ocultarApp();
+  mostrarLogin();
+});
+
+function ocultarApp(){
+  ['header','#fab','.tabs','.container'].forEach(sel=>{
+    const el = document.querySelector(sel) || document.getElementById(sel.replace('#',''));
+    if(el) el.style.display = 'none';
+  });
+}
+
+function mostrarApp(){
+  const header = document.querySelector('header');
+  const tabs = document.querySelector('.tabs');
+  const container = document.querySelector('.container');
+  const fab = document.getElementById('fab');
+  if(header) header.style.display = 'block';
+  if(tabs) tabs.style.display = 'flex';
+  if(container) container.style.display = 'block';
+  if(fab) fab.style.display = 'flex';
+}
 
 </script>
 
