@@ -22,10 +22,11 @@
     --radius:14px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-  body{
+  html, body{
     margin:0; font-family:'Segoe UI', Roboto, Arial, sans-serif;
     background:var(--bg); color:var(--text); padding-bottom:80px;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none !important;
+    overflow-y: auto;
   }
   header{
     background:linear-gradient(135deg, var(--app-color), var(--app-color-2));
@@ -4032,6 +4033,18 @@ if('serviceWorker' in navigator){
     regs.forEach(r=> r.unregister());
   });
 }
+
+// Bloquear pull-to-refresh en Chrome Android
+let lastY = 0;
+document.addEventListener('touchstart', e=>{ lastY = e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchmove', e=>{
+  const y = e.touches[0].clientY;
+  const scrollTop = document.scrollingElement?.scrollTop || 0;
+  if(scrollTop <= 0 && y > lastY){
+    e.preventDefault();
+  }
+  lastY = y;
+}, {passive:false});
 </script>
 </body>
 </html>
