@@ -345,7 +345,10 @@
     <p class="muted">Registro automático de todas las acciones realizadas en la app.</p>
 
     <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
-      <select id="filtroAuditModulo" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:13px;">
+      <select id="filtroAuditUsuario" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:14px;">
+        <option value="">Todos los usuarios</option>
+      </select>
+      <select id="filtroAuditModulo" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:14px;">
         <option value="">Todos los módulos</option>
         <option value="Donante">Donaciones</option>
         <option value="Voluntario">Voluntarios</option>
@@ -357,21 +360,30 @@
         <option value="Directorio">Directorio</option>
         <option value="Censo">Censo</option>
       </select>
-      <select id="filtroAuditAccion" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:13px;">
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+      <select id="filtroAuditAccion" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:14px;">
         <option value="">Todas las acciones</option>
         <option value="Creó">Creó</option>
         <option value="Editó">Editó</option>
         <option value="Eliminó">Eliminó</option>
       </select>
+      <div style="flex:1; display:flex; gap:4px;">
+        <input type="date" id="filtroAuditDesde" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:13px;">
+        <input type="date" id="filtroAuditHasta" onchange="renderAuditoria()" style="flex:1; padding:8px; border-radius:10px; border:1.5px solid #dde6e3; font-size:13px;">
+      </div>
     </div>
 
     <div class="search-box">
       <input type="text" id="buscarAuditoria" placeholder="Buscar en historial..." oninput="renderAuditoria()">
     </div>
 
-    <div id="listaAuditoria"></div>
+    <div class="btn-row">
+      <button class="btn secondary" onclick="verReporteUsuario()">📄 Ver reporte detallado</button>
+      <button class="btn danger" onclick="limpiarAuditoria()" style="margin-top:8px;">🗑️ Limpiar historial</button>
+    </div>
 
-    <button class="btn danger" onclick="limpiarAuditoria()" style="margin-top:10px;">🗑️ Limpiar historial</button>
+    <div id="listaAuditoria" style="margin-top:10px;"></div>
   </div>
 
   <!-- USUARIOS -->
@@ -596,12 +608,21 @@
     </div>
 
     <!-- Botón imprimir -->
-    <button class="btn secondary" onclick="imprimirReporte()" style="margin-bottom:20px;">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn secondary" onclick="verReporteGeneral()" style="margin-bottom:20px;">📄 Ver reporte completo / Imprimir</button>
   </div>
 
 
 <!-- FAB -->
 <button class="fab" id="fab" onclick="abrirModalActual()">+</button>
+
+<!-- MODAL REPORTE IMPRIMIBLE -->
+<div class="overlay" id="modalReporte" style="align-items:flex-start; overflow-y:auto;">
+  <div class="modal" style="border-radius:18px; max-height:92vh; margin-top:4vh;">
+    <button class="close-x" onclick="cerrarModal('modalReporte')" style="position:sticky; top:0; float:right; z-index:10;">✕</button>
+    <div id="contenidoReporte"></div>
+    <button class="btn secondary" onclick="imprimirDesdeModal()" style="position:sticky; bottom:0; margin-top:16px;">🖨️ Imprimir / Guardar PDF</button>
+  </div>
+</div>
 
 <!-- MODAL USUARIO -->
 <div class="overlay" id="modalUsuario">
@@ -1370,12 +1391,13 @@ function registrarAudit(accion, modulo, descripcion){
   if(!data.auditoria) data.auditoria = [];
   data.auditoria.unshift({
     id: uid(),
-    accion,       // 'Creó', 'Editó', 'Eliminó'
-    modulo,       // 'Donante', 'Voluntario', etc.
-    descripcion,  // texto libre
+    accion,
+    modulo,
+    descripcion,
+    usuario: sesionActual ? sesionActual.nombre : 'Sistema',
+    usuarioRol: sesionActual ? sesionActual.rol : '',
     fecha: new Date().toISOString()
   });
-  // Mantener máximo 500 registros
   if(data.auditoria.length > 500) data.auditoria = data.auditoria.slice(0,500);
 }
 
@@ -3044,21 +3066,37 @@ function renderCensoPueblos(){
 }
 
 /* ---------- AUDITORÍA ---------- */
+async function actualizarFiltroUsuariosAudit(){
+  const sel = document.getElementById('filtroAuditUsuario');
+  if(!sel) return;
+  const usuarios = await getUsuarios();
+  const usuariosEnAudit = [...new Set((data.auditoria||[]).map(a=>a.usuario).filter(Boolean))];
+  sel.innerHTML = '<option value="">Todos los usuarios</option>' +
+    usuariosEnAudit.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+}
+
 function renderAuditoria(){
+  actualizarFiltroUsuariosAudit();
   const q = (document.getElementById('buscarAuditoria').value||'').toLowerCase();
   const modulo = document.getElementById('filtroAuditModulo').value;
   const accion = document.getElementById('filtroAuditAccion').value;
+  const usuario = document.getElementById('filtroAuditUsuario').value;
+  const desde = document.getElementById('filtroAuditDesde').value;
+  const hasta = document.getElementById('filtroAuditHasta').value;
   const cont = document.getElementById('listaAuditoria');
 
   const lista = (data.auditoria||[]).filter(a=>{
     if(modulo && a.modulo !== modulo) return false;
     if(accion && a.accion !== accion) return false;
-    if(q && !(a.descripcion||'').toLowerCase().includes(q) && !a.modulo.toLowerCase().includes(q)) return false;
+    if(usuario && a.usuario !== usuario) return false;
+    if(desde && a.fecha.slice(0,10) < desde) return false;
+    if(hasta && a.fecha.slice(0,10) > hasta) return false;
+    if(q && !(a.descripcion||'').toLowerCase().includes(q) && !a.modulo.toLowerCase().includes(q) && !(a.usuario||'').toLowerCase().includes(q)) return false;
     return true;
   });
 
   if(lista.length === 0){
-    cont.innerHTML = `<div class="empty"><span>📋</span>No hay registros de auditoría aún.<br>Cada vez que crees, edites o elimines algo aparecerá aquí.</div>`;
+    cont.innerHTML = `<div class="empty"><span>📋</span>No hay registros con esos filtros.</div>`;
     return;
   }
 
@@ -3067,17 +3105,18 @@ function renderAuditoria(){
 
   cont.innerHTML = lista.map(a=>{
     const fecha = new Date(a.fecha);
-    const fechaStr = fecha.toLocaleDateString('es-PR', {day:'2-digit', month:'short', year:'numeric'});
-    const horaStr = fecha.toLocaleTimeString('es-PR', {hour:'2-digit', minute:'2-digit'});
+    const fechaStr = fecha.toLocaleDateString('es-PR',{day:'2-digit',month:'short',year:'numeric'});
+    const horaStr = fecha.toLocaleTimeString('es-PR',{hour:'2-digit',minute:'2-digit'});
     return `
       <div class="item" style="border-left-color:${textoAccion[a.accion]||'var(--app-color)'};">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
             <span class="tag" style="background:${colorAccion[a.accion]||'#eee'}; color:${textoAccion[a.accion]||'#333'};">${a.accion}</span>
             <span class="tag" style="margin-left:4px;">${escapeHtml(a.modulo)}</span>
-            <div style="margin-top:6px; font-size:13px; color:var(--text);">${escapeHtml(a.descripcion||'')}</div>
+            ${a.usuario ? `<span class="muted" style="display:block; margin-top:4px;">👤 ${escapeHtml(a.usuario)}</span>` : ''}
+            <div style="margin-top:6px; font-size:14px; color:var(--text);">${escapeHtml(a.descripcion||'')}</div>
           </div>
-          <div style="text-align:right; font-size:11px; color:var(--muted); white-space:nowrap; margin-left:8px;">
+          <div style="text-align:right; font-size:12px; color:var(--muted); white-space:nowrap; margin-left:8px;">
             ${fechaStr}<br>${horaStr}
           </div>
         </div>
@@ -3093,6 +3132,132 @@ function limpiarAuditoria(){
   renderAuditoria();
   showToast('Historial limpiado 🗑️');
 }
+
+function verReporteUsuario(){
+  const usuario = document.getElementById('filtroAuditUsuario').value;
+  const desde = document.getElementById('filtroAuditDesde').value;
+  const hasta = document.getElementById('filtroAuditHasta').value;
+  const modulo = document.getElementById('filtroAuditModulo').value;
+
+  let lista = data.auditoria || [];
+  if(usuario) lista = lista.filter(a=>a.usuario===usuario);
+  if(desde) lista = lista.filter(a=>a.fecha.slice(0,10)>=desde);
+  if(hasta) lista = lista.filter(a=>a.fecha.slice(0,10)<=hasta);
+  if(modulo) lista = lista.filter(a=>a.modulo===modulo);
+
+  const titulo = usuario ? `Actividad de ${usuario}` : 'Actividad de todos los usuarios';
+  const periodo = desde||hasta ? `Período: ${desde||'inicio'} al ${hasta||'hoy'}` : 'Todo el período';
+  const org = data.orgName || 'Mi Fundación';
+  const ahora = new Date().toLocaleString('es-PR');
+
+  // Agrupar por usuario
+  const porUsuario = {};
+  lista.forEach(a=>{
+    const u = a.usuario||'Sin usuario';
+    if(!porUsuario[u]) porUsuario[u] = [];
+    porUsuario[u].push(a);
+  });
+
+  const colorAccion = {'Creó':'#0e7c61','Editó':'#b9700a','Eliminó':'#e2574c'};
+
+  const html = `
+    <div style="font-family:sans-serif; color:#1f2d2a;">
+      <div style="text-align:center; border-bottom:3px solid #0e7c61; padding-bottom:16px; margin-bottom:20px;">
+        <div style="font-size:32px;">🌱</div>
+        <h2 style="margin:4px 0; color:#0e7c61; font-size:22px;">${escapeHtml(org)}</h2>
+        <h3 style="margin:4px 0; font-size:18px;">📋 ${escapeHtml(titulo)}</h3>
+        <p style="margin:4px 0; color:#6b7d79; font-size:13px;">${escapeHtml(periodo)}</p>
+        <p style="margin:4px 0; color:#6b7d79; font-size:12px;">Generado: ${ahora}</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+        <div style="background:#e6f4f0; border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:24px; font-weight:700; color:#0e7c61;">${lista.length}</div>
+          <div style="font-size:13px; color:#6b7d79;">Acciones totales</div>
+        </div>
+        <div style="background:#fff3e0; border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:24px; font-weight:700; color:#b9700a;">${Object.keys(porUsuario).length}</div>
+          <div style="font-size:13px; color:#6b7d79;">Usuarios activos</div>
+        </div>
+      </div>
+
+      ${Object.keys(porUsuario).map(u=>{
+        const acciones = porUsuario[u];
+        const crea = acciones.filter(a=>a.accion==='Creó').length;
+        const edita = acciones.filter(a=>a.accion==='Editó').length;
+        const elim = acciones.filter(a=>a.accion==='Eliminó').length;
+        return `
+          <div style="border:1px solid #dde6e3; border-radius:14px; padding:16px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 style="margin:0; font-size:17px;">👤 ${escapeHtml(u)}</h3>
+              <span style="background:#e6f4f0; color:#0e7c61; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:600;">${acciones.length} acciones</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+              <span style="background:#e6f4f0; color:#0e7c61; padding:4px 10px; border-radius:20px; font-size:13px;">✅ Creó: ${crea}</span>
+              <span style="background:#fff3e0; color:#b9700a; padding:4px 10px; border-radius:20px; font-size:13px;">✏️ Editó: ${edita}</span>
+              <span style="background:#fdecea; color:#e2574c; padding:4px 10px; border-radius:20px; font-size:13px;">🗑️ Eliminó: ${elim}</span>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr style="background:#f4f8f7;">
+                  <th style="padding:8px; text-align:left; border-radius:8px 0 0 8px;">Acción</th>
+                  <th style="padding:8px; text-align:left;">Módulo</th>
+                  <th style="padding:8px; text-align:left;">Descripción</th>
+                  <th style="padding:8px; text-align:right; border-radius:0 8px 8px 0;">Fecha/Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${acciones.map((a,i)=>{
+                  const f = new Date(a.fecha);
+                  return `
+                    <tr style="border-bottom:1px solid #f0f0f0; background:${i%2===0?'#fff':'#fafafa'};">
+                      <td style="padding:8px;"><span style="color:${colorAccion[a.accion]||'#333'}; font-weight:600;">${escapeHtml(a.accion)}</span></td>
+                      <td style="padding:8px;">${escapeHtml(a.modulo)}</td>
+                      <td style="padding:8px;">${escapeHtml(a.descripcion||'')}</td>
+                      <td style="padding:8px; text-align:right; white-space:nowrap; color:#6b7d79;">
+                        ${f.toLocaleDateString('es-PR',{day:'2-digit',month:'short'})}<br>
+                        ${f.toLocaleTimeString('es-PR',{hour:'2-digit',minute:'2-digit'})}
+                      </td>
+                    </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }).join('')}
+
+      ${lista.length===0?'<p style="text-align:center; color:#6b7d79; padding:20px;">No hay actividad registrada con los filtros seleccionados.</p>':''}
+    </div>
+  `;
+
+  document.getElementById('contenidoReporte').innerHTML = html;
+  document.getElementById('modalReporte').classList.add('active');
+}
+
+function imprimirDesdeModal(){
+  const contenido = document.getElementById('contenidoReporte').innerHTML;
+  const ventana = window.open('','_blank');
+  ventana.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Reporte FoundationManager</title>
+      <style>
+        body{font-family:sans-serif; color:#1f2d2a; margin:20px; font-size:13px;}
+        @media print{ body{margin:10px;} button{display:none;} }
+        table{width:100%; border-collapse:collapse;}
+        th,td{padding:8px; border-bottom:1px solid #eee;}
+      </style>
+    </head>
+    <body>
+      <button onclick="window.print()" style="background:#0e7c61; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:14px; cursor:pointer; margin-bottom:16px;">🖨️ Imprimir / Guardar PDF</button>
+      ${contenido}
+    </body>
+    </html>
+  `);
+  ventana.document.close();
+}
+
 
 
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
@@ -3483,10 +3648,129 @@ function renderReportes(){
   `).join('') : '';
 }
 
-function imprimirReporte(){
+function verReporteGeneral(){
   renderReportes();
-  setTimeout(()=>window.print(), 300);
+  const org = data.orgName || 'Mi Fundación';
+  const ahora = new Date().toLocaleString('es-PR');
+  const desde = document.getElementById('repDesde').value;
+  const hasta = document.getElementById('repHasta').value;
+  const periodo = desde||hasta ? `${desde||'inicio'} al ${hasta||'hoy'}` : 'Todo el período';
+
+  const { totalRecaudado, totalEntregadoEfectivo, saldo, articulos } = calcularInventario();
+  const donsMon = data.donantes.filter(d=>d.tipo==='Monetaria'||!d.tipo);
+  const totalDonado = donsMon.reduce((s,d)=>s+(Number(d.monto)||0),0);
+  const solsPend = data.solicitudes.filter(s=>s.estado==='Pendiente').length;
+  const cp = data.censoPersonas;
+
+  const html = `
+    <div style="font-family:sans-serif; color:#1f2d2a;">
+      <div style="text-align:center; border-bottom:3px solid #0e7c61; padding-bottom:16px; margin-bottom:20px;">
+        <div style="font-size:32px;">🌱</div>
+        <h2 style="margin:4px 0; color:#0e7c61; font-size:22px;">${escapeHtml(org)}</h2>
+        <h3 style="margin:4px 0; font-size:18px;">📊 Reporte General</h3>
+        <p style="margin:4px 0; color:#6b7d79; font-size:13px;">Período: ${escapeHtml(periodo)}</p>
+        <p style="margin:4px 0; color:#6b7d79; font-size:12px;">Generado: ${ahora}</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+        <div style="background:#e6f4f0; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#0e7c61;">$${totalRecaudado.toFixed(2)}</div>
+          <div style="font-size:12px; color:#6b7d79;">Total recaudado</div>
+        </div>
+        <div style="background:#e6f4f0; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#0e7c61;">$${saldo.toFixed(2)}</div>
+          <div style="font-size:12px; color:#6b7d79;">Saldo en caja</div>
+        </div>
+        <div style="background:#fff3e0; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#b9700a;">${data.donantes.length}</div>
+          <div style="font-size:12px; color:#6b7d79;">Donantes</div>
+        </div>
+        <div style="background:#fff3e0; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#b9700a;">${data.voluntarios.length}</div>
+          <div style="font-size:12px; color:#6b7d79;">Voluntarios</div>
+        </div>
+        <div style="background:#fdecea; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#e2574c;">${solsPend}</div>
+          <div style="font-size:12px; color:#6b7d79;">Solicitudes pendientes</div>
+        </div>
+        <div style="background:#fdecea; border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:#e2574c;">${cp.filter(p=>p.estado==='Necesita ayuda').length}</div>
+          <div style="font-size:12px; color:#6b7d79;">Personas necesitan ayuda</div>
+        </div>
+      </div>
+
+      <h3 style="color:#0e7c61; border-bottom:2px solid #e6f4f0; padding-bottom:6px;">📦 Inventario</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:20px;">
+        <thead><tr style="background:#f4f8f7;">
+          <th style="padding:8px; text-align:left;">Categoría</th>
+          <th style="padding:8px; text-align:right;">Donado</th>
+          <th style="padding:8px; text-align:right;">Entregado</th>
+          <th style="padding:8px; text-align:right;">Disponible</th>
+        </tr></thead>
+        <tbody>
+          ${articulos.length ? articulos.map((a,i)=>`
+            <tr style="border-bottom:1px solid #f0f0f0; background:${i%2===0?'#fff':'#fafafa'};">
+              <td style="padding:8px;">${escapeHtml(a.categoria)}</td>
+              <td style="padding:8px; text-align:right;">${a.donado}</td>
+              <td style="padding:8px; text-align:right;">${a.entregado}</td>
+              <td style="padding:8px; text-align:right; color:${a.disponible<=5?'#e2574c':'#0e7c61'}; font-weight:600;">${a.disponible}${a.disponible<=5?' ⚠️':''}</td>
+            </tr>`).join('') : '<tr><td colspan="4" style="padding:12px; text-align:center; color:#6b7d79;">Sin artículos en inventario</td></tr>'}
+        </tbody>
+      </table>
+
+      <h3 style="color:#0e7c61; border-bottom:2px solid #e6f4f0; padding-bottom:6px;">🆘 Solicitudes por estado</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:20px;">
+        <thead><tr style="background:#f4f8f7;">
+          <th style="padding:8px; text-align:left;">Nombre</th>
+          <th style="padding:8px; text-align:left;">Qué solicita</th>
+          <th style="padding:8px; text-align:left;">Estado</th>
+        </tr></thead>
+        <tbody>
+          ${data.solicitudes.length ? [...data.solicitudes].sort((a,b)=>a.estado.localeCompare(b.estado)).map((s,i)=>`
+            <tr style="border-bottom:1px solid #f0f0f0; background:${i%2===0?'#fff':'#fafafa'};">
+              <td style="padding:8px;">${escapeHtml(s.nombre)}</td>
+              <td style="padding:8px;">${escapeHtml(s.queSolicita||'—')}</td>
+              <td style="padding:8px; color:${s.estado==='Pendiente'?'#b9700a':'#0e7c61'}; font-weight:600;">${escapeHtml(s.estado)}</td>
+            </tr>`).join('') : '<tr><td colspan="3" style="padding:12px; text-align:center; color:#6b7d79;">Sin solicitudes</td></tr>'}
+        </tbody>
+      </table>
+
+      <h3 style="color:#0e7c61; border-bottom:2px solid #e6f4f0; padding-bottom:6px;">🏘️ Censo por pueblo</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:20px;">
+        <thead><tr style="background:#f4f8f7;">
+          <th style="padding:8px; text-align:left;">Pueblo</th>
+          <th style="padding:8px; text-align:right;">Total</th>
+          <th style="padding:8px; text-align:right;">Necesitan ayuda</th>
+          <th style="padding:8px; text-align:right;">Atendidos</th>
+        </tr></thead>
+        <tbody>
+          ${cp.length ? [...new Set(cp.map(p=>p.pueblo).filter(Boolean))].sort().map((pueblo,i)=>{
+            const pp = cp.filter(p=>p.pueblo===pueblo);
+            return `<tr style="border-bottom:1px solid #f0f0f0; background:${i%2===0?'#fff':'#fafafa'};">
+              <td style="padding:8px;">${escapeHtml(pueblo)}</td>
+              <td style="padding:8px; text-align:right;">${pp.length}</td>
+              <td style="padding:8px; text-align:right; color:#e2574c;">${pp.filter(p=>p.estado==='Necesita ayuda').length}</td>
+              <td style="padding:8px; text-align:right; color:#0e7c61;">${pp.filter(p=>p.estado==='Ayuda recibida').length}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="4" style="padding:12px; text-align:center; color:#6b7d79;">Sin registros en censo</td></tr>'}
+        </tbody>
+      </table>
+
+      <p style="text-align:center; color:#6b7d79; font-size:12px; margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+        FoundationManager — ${escapeHtml(org)} — ${ahora}
+      </p>
+    </div>
+  `;
+
+  document.getElementById('contenidoReporte').innerHTML = html;
+  document.getElementById('modalReporte').classList.add('active');
 }
+
+function imprimirReporte(){
+  verReporteGeneral();
+}
+
+
 
 
 /* ---------- EXPORT / IMPORT ---------- */
