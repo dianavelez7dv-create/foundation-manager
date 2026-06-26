@@ -1265,7 +1265,12 @@ async function iniciarSesion(){
   if(!user){ err.textContent='⚠️ Contraseña incorrecta'; err.style.display='block'; return; }
 
   sesionActual = user;
-  sessionStorage.setItem('fm_sesion_activa', JSON.stringify({id:user.id, nombre:user.nombre, rol:user.rol}));
+  localStorage.setItem('fm_sesion_activa', JSON.stringify({
+    id: user.id,
+    nombre: user.nombre,
+    rol: user.rol,
+    ts: Date.now()
+  }));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('loginClave').value='';
   err.style.display='none';
@@ -1278,7 +1283,7 @@ async function iniciarSesion(){
 function cerrarSesion(){
   if(!confirm('¿Cerrar sesión?')) return;
   sesionActual = null;
-  sessionStorage.removeItem('fm_sesion_activa');
+  localStorage.removeItem('fm_sesion_activa');
   ocultarApp();
   mostrarLogin();
 }
@@ -3975,19 +3980,27 @@ document.addEventListener('DOMContentLoaded', function(){
   cargarDatos();
   renderListaCategorias();
 
-  // Verificar si hay sesión activa en sessionStorage (sobrevive recargas)
-  const sesionGuardada = sessionStorage.getItem('fm_sesion_activa');
-  if(sesionGuardada){
+  // Verificar sesión guardada (expira en 4 horas de inactividad)
+  const raw = localStorage.getItem('fm_sesion_activa');
+  if(raw){
     try{
-      sesionActual = JSON.parse(sesionGuardada);
-      mostrarApp();
-      aplicarPermisos();
-      showView('inicio');
-      return;
-    }catch(e){ sessionStorage.removeItem('fm_sesion_activa'); }
+      const s = JSON.parse(raw);
+      const CUATRO_HORAS = 4 * 60 * 60 * 1000;
+      if(Date.now() - s.ts < CUATRO_HORAS){
+        sesionActual = s;
+        // Renovar timestamp
+        s.ts = Date.now();
+        localStorage.setItem('fm_sesion_activa', JSON.stringify(s));
+        mostrarApp();
+        aplicarPermisos();
+        showView('inicio');
+        return;
+      } else {
+        localStorage.removeItem('fm_sesion_activa');
+      }
+    }catch(e){ localStorage.removeItem('fm_sesion_activa'); }
   }
 
-  // No hay sesión, mostrar login
   ocultarApp();
   mostrarLogin();
 });
@@ -4013,11 +4026,10 @@ function mostrarApp(){
 </script>
 
 <script>
+// Desregistrar service workers anteriores que puedan causar problemas
 if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js')
-      .then(()=> console.log('SW registrado'))
-      .catch(e=> console.log('SW error:', e));
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=> r.unregister());
   });
 }
 </script>
