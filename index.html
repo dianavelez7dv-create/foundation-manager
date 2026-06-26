@@ -1286,8 +1286,7 @@ async function mostrarLogin(){
 function aplicarPermisos(){
   if(!sesionActual) return;
   const p = PERMISOS[sesionActual.rol] || PERMISOS.visualizador;
-  document.getElementById('headerUsuarioNombre').textContent = `👤 ${sesionActual.nombre} · ${sesionActual.rol}`;
-  document.getElementById('headerUsuario').style.display = 'flex';
+  document.getElementById('headerUsuarioNombre').textContent = `👤 ${sesionActual.nombre}`;
   const fab = document.getElementById('fab');
   if(fab) fab.style.display = p.editar ? 'flex' : 'none';
   const tabUsuarios = document.getElementById('tabUsuarios');
