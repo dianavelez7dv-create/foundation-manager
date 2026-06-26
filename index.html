@@ -1201,7 +1201,9 @@ const PERMISOS = {
 
 async function getUsuarios(){
   const key = getJsonBinKey();
-  if(!key) return getUsuariosLocal();
+  // Siempre cargar locales primero como base
+  const locales = getUsuariosLocal();
+  if(!key) return locales;
   try{
     const binId = localStorage.getItem('fm_usuarios_bin_id');
     if(binId){
@@ -1209,16 +1211,26 @@ async function getUsuarios(){
         headers:{'X-Master-Key': key}
       });
       const json = await res.json();
-      if(json.record?.usuarios) return json.record.usuarios;
+      if(json.record?.usuarios && json.record.usuarios.length > 0){
+        // Guardar en local como respaldo
+        localStorage.setItem('fm_usuarios', JSON.stringify(json.record.usuarios));
+        return json.record.usuarios;
+      }
     }
-    return getUsuariosLocal();
-  } catch(e){ return getUsuariosLocal(); }
+    return locales;
+  } catch(e){ return locales; }
 }
 
 function getUsuariosLocal(){
   const raw = localStorage.getItem('fm_usuarios');
-  if(raw) try{ return JSON.parse(raw); }catch(e){}
-  return [...USUARIOS_DEFAULT];
+  if(raw) try{
+    const lista = JSON.parse(raw);
+    if(lista && lista.length > 0) return lista;
+  }catch(e){}
+  // Siempre devolver al menos el admin por defecto
+  const defaults = [...USUARIOS_DEFAULT];
+  localStorage.setItem('fm_usuarios', JSON.stringify(defaults));
+  return defaults;
 }
 
 async function guardarUsuarios(usuarios){
