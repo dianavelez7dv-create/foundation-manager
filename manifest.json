@@ -1,0 +1,15 @@
+{
+  "name": "FoundationManager",
+  "short_name": "FoundMgr",
+  "start_url": "/foundation-manager/",
+  "display": "standalone",
+  "background_color": "#0e7c61",
+  "theme_color": "#0e7c61",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
