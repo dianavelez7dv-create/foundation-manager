@@ -1068,11 +1068,46 @@
     <input id="censoFundacionTelefono" type="tel" placeholder="Ej. 787-000-0000">
     <label>WhatsApp</label>
     <input id="censoFundacionWhatsapp" type="tel" placeholder="Ej. 787-000-0000">
-    <label>Provisiones que TIENEN disponibles</label>
-    <textarea id="censoFundacionTienen" rows="2" placeholder="Ej. Agua, arroz, ropa niños..."></textarea>
-    <label>Provisiones que NECESITAN</label>
-    <textarea id="censoFundacionNecesitan" rows="2" placeholder="Ej. Medicamentos, pañales..."></textarea>
-    <label>Comentarios</label>
+    <label>Email</label>
+    <input id="censoFundacionEmail" type="email" placeholder="Ej. contacto@fundacion.org">
+    <label>Página web (opcional)</label>
+    <input id="censoFundacionWeb" placeholder="Ej. www.fundacion.org">
+    <label>Facebook (opcional)</label>
+    <input id="censoFundacionFacebook" placeholder="Ej. facebook.com/fundacion">
+    <label>Instagram (opcional)</label>
+    <input id="censoFundacionInstagram" placeholder="Ej. @fundacion">
+
+    <div style="border-top:1px solid #eee; margin-top:14px; padding-top:14px;">
+      <strong style="font-size:15px; color:var(--app-color);">👥 Directiva</strong>
+      <label>Director/a o Presidente/a</label>
+      <input id="censoFundacionDirector" placeholder="Ej. María Rodríguez">
+      <label>Secretario/a (opcional)</label>
+      <input id="censoFundacionSecretario" placeholder="Ej. Juan Torres">
+      <label>Tesorero/a (opcional)</label>
+      <input id="censoFundacionTesorero" placeholder="Ej. Carmen López">
+      <label>Otros miembros de la directiva (opcional)</label>
+      <textarea id="censoFundacionDirectiva" rows="2" placeholder="Ej. Vocal 1: Pedro García, Vocal 2: Ana Soto"></textarea>
+    </div>
+
+    <div style="border-top:1px solid #eee; margin-top:14px; padding-top:14px;">
+      <strong style="font-size:15px; color:var(--app-color);">📄 Datos legales</strong>
+      <label>Número de registro</label>
+      <input id="censoFundacionRegistro" placeholder="Ej. 12345-PR">
+      <label>EIN</label>
+      <input id="censoFundacionEIN" placeholder="Ej. 00-0000000">
+      <label>Estatus legal</label>
+      <input id="censoFundacionEstatus" placeholder="Ej. 501(c)(3)">
+    </div>
+
+    <div style="border-top:1px solid #eee; margin-top:14px; padding-top:14px;">
+      <strong style="font-size:15px; color:var(--app-color);">📦 Provisiones</strong>
+      <label>Provisiones que TIENEN disponibles</label>
+      <textarea id="censoFundacionTienen" rows="2" placeholder="Ej. Agua, arroz, ropa niños..."></textarea>
+      <label>Provisiones que NECESITAN</label>
+      <textarea id="censoFundacionNecesitan" rows="2" placeholder="Ej. Medicamentos, pañales..."></textarea>
+    </div>
+
+    <label>Comentarios / Horario de atención</label>
     <textarea id="censoFundacionComentarios" rows="2" placeholder="Horario de atención, área que cubren..."></textarea>
     <button class="btn" onclick="guardarCensoFundacion()">Guardar</button>
   </div>
@@ -3014,8 +3049,12 @@ function renderCensoPersonas(){
 /* --- Fundaciones en censo --- */
 function abrirModalCensoFundacion(id){
   ['censoFundacionId','censoFundacionNombre','censoFundacionPueblo','censoFundacionBarrio',
-   'censoFundacionTelefono','censoFundacionWhatsapp','censoFundacionTienen',
-   'censoFundacionNecesitan','censoFundacionComentarios'].forEach(c=>{ document.getElementById(c).value=''; });
+   'censoFundacionTelefono','censoFundacionWhatsapp','censoFundacionEmail','censoFundacionWeb',
+   'censoFundacionFacebook','censoFundacionInstagram','censoFundacionDirector',
+   'censoFundacionSecretario','censoFundacionTesorero','censoFundacionDirectiva',
+   'censoFundacionRegistro','censoFundacionEIN','censoFundacionEstatus',
+   'censoFundacionTienen','censoFundacionNecesitan','censoFundacionComentarios'
+  ].forEach(c=>{ const el=document.getElementById(c); if(el) el.value=''; });
   document.getElementById('tituloModalCensoFundacion').textContent = 'Registrar fundación';
 
   if(id){
@@ -3025,8 +3064,20 @@ function abrirModalCensoFundacion(id){
       document.getElementById('censoFundacionNombre').value = f.nombre;
       document.getElementById('censoFundacionPueblo').value = f.pueblo||'';
       document.getElementById('censoFundacionBarrio').value = f.barrio||'';
-      cargarBloqueGPS('btnGpsCF','stGpsCF','cfLat','cfLng', f.lat, f.lng);      document.getElementById('censoFundacionTelefono').value = f.telefono||'';
+      cargarBloqueGPS('btnGpsCF','stGpsCF','cfLat','cfLng', f.lat, f.lng);
+      document.getElementById('censoFundacionTelefono').value = f.telefono||'';
       document.getElementById('censoFundacionWhatsapp').value = f.whatsapp||'';
+      document.getElementById('censoFundacionEmail').value = f.email||'';
+      document.getElementById('censoFundacionWeb').value = f.web||'';
+      document.getElementById('censoFundacionFacebook').value = f.facebook||'';
+      document.getElementById('censoFundacionInstagram').value = f.instagram||'';
+      document.getElementById('censoFundacionDirector').value = f.director||'';
+      document.getElementById('censoFundacionSecretario').value = f.secretario||'';
+      document.getElementById('censoFundacionTesorero').value = f.tesorero||'';
+      document.getElementById('censoFundacionDirectiva').value = f.directiva||'';
+      document.getElementById('censoFundacionRegistro').value = f.registro||'';
+      document.getElementById('censoFundacionEIN').value = f.ein||'';
+      document.getElementById('censoFundacionEstatus').value = f.estatus||'';
       document.getElementById('censoFundacionTienen').value = f.tienen||'';
       document.getElementById('censoFundacionNecesitan').value = f.necesitan||'';
       document.getElementById('censoFundacionComentarios').value = f.comentarios||'';
@@ -3049,6 +3100,17 @@ function guardarCensoFundacion(){
     lng: document.getElementById('cfLng')?.value || '',
     telefono: document.getElementById('censoFundacionTelefono').value.trim(),
     whatsapp: document.getElementById('censoFundacionWhatsapp').value.trim(),
+    email: document.getElementById('censoFundacionEmail').value.trim(),
+    web: document.getElementById('censoFundacionWeb').value.trim(),
+    facebook: document.getElementById('censoFundacionFacebook').value.trim(),
+    instagram: document.getElementById('censoFundacionInstagram').value.trim(),
+    director: document.getElementById('censoFundacionDirector').value.trim(),
+    secretario: document.getElementById('censoFundacionSecretario').value.trim(),
+    tesorero: document.getElementById('censoFundacionTesorero').value.trim(),
+    directiva: document.getElementById('censoFundacionDirectiva').value.trim(),
+    registro: document.getElementById('censoFundacionRegistro').value.trim(),
+    ein: document.getElementById('censoFundacionEIN').value.trim(),
+    estatus: document.getElementById('censoFundacionEstatus').value.trim(),
     tienen: document.getElementById('censoFundacionTienen').value.trim(),
     necesitan: document.getElementById('censoFundacionNecesitan').value.trim(),
     comentarios: document.getElementById('censoFundacionComentarios').value.trim()
@@ -3089,10 +3151,16 @@ function renderCensoFundaciones(){
         <div>
           <h3>${escapeHtml(f.nombre)}</h3>
           ${f.pueblo ? `<span class="muted">📍 ${escapeHtml(f.pueblo)}${f.barrio?', '+escapeHtml(f.barrio):''}</span>` : ''}
+          ${f.director ? `<div class="muted" style="margin-top:4px;">👤 Director/a: <strong>${escapeHtml(f.director)}</strong></div>` : ''}
+          ${f.secretario ? `<div class="muted">✍️ Secretario/a: ${escapeHtml(f.secretario)}</div>` : ''}
+          ${f.tesorero ? `<div class="muted">💰 Tesorero/a: ${escapeHtml(f.tesorero)}</div>` : ''}
           ${f.tienen ? `<div style="margin-top:6px;"><span class="tag" style="background:#e6f4f0; color:var(--app-color);">✅ Tienen: ${escapeHtml(f.tienen)}</span></div>` : ''}
           ${f.necesitan ? `<div style="margin-top:4px;"><span class="tag" style="background:#fdecea; color:var(--danger);">🆘 Necesitan: ${escapeHtml(f.necesitan)}</span></div>` : ''}
-          ${(f.telefono||f.whatsapp) ? `<div class="muted" style="margin-top:6px;">${[f.telefono?'<a href="tel:'+escapeHtml(f.telefono)+'" style="color:var(--app-color);text-decoration:none;">📞 '+escapeHtml(f.telefono)+'</a>':'', f.whatsapp?'💬 '+escapeHtml(f.whatsapp):''].filter(Boolean).join(' · ')}</div>` : ''}
+          ${(f.telefono||f.whatsapp||f.email) ? `<div class="muted" style="margin-top:6px;">${[f.telefono?'<a href="tel:'+escapeHtml(f.telefono)+'" style="color:var(--app-color);text-decoration:none;">📞 '+escapeHtml(f.telefono)+'</a>':'', f.whatsapp?'💬 '+escapeHtml(f.whatsapp):'', f.email?'✉️ '+escapeHtml(f.email):''].filter(Boolean).join(' · ')}</div>` : ''}
+          ${(f.facebook||f.instagram||f.web) ? `<div class="muted" style="margin-top:4px;">${[f.web?'🌐 '+escapeHtml(f.web):'', f.facebook?'📘 '+escapeHtml(f.facebook):'', f.instagram?'📷 '+escapeHtml(f.instagram):''].filter(Boolean).join(' · ')}</div>` : ''}
+          ${f.ein ? `<div class="muted" style="margin-top:4px;">EIN: ${escapeHtml(f.ein)}${f.estatus?' · '+escapeHtml(f.estatus):''}</div>` : ''}
           ${f.comentarios ? `<div class="muted" style="margin-top:4px;">${escapeHtml(f.comentarios)}</div>` : ''}
+          ${linkNavegar(f.lat, f.lng)}
         </div>
       </div>
       <div class="item-actions">
