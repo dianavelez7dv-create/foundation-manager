@@ -1263,6 +1263,7 @@ async function iniciarSesion(){
   if(!user){ err.textContent='⚠️ Contraseña incorrecta'; err.style.display='block'; return; }
 
   sesionActual = user;
+  sessionStorage.setItem('fm_sesion_activa', JSON.stringify({id:user.id, nombre:user.nombre, rol:user.rol}));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('loginClave').value='';
   err.style.display='none';
@@ -1275,6 +1276,7 @@ async function iniciarSesion(){
 function cerrarSesion(){
   if(!confirm('¿Cerrar sesión?')) return;
   sesionActual = null;
+  sessionStorage.removeItem('fm_sesion_activa');
   ocultarApp();
   mostrarLogin();
 }
@@ -3970,8 +3972,20 @@ function importarDatos(event){
 document.addEventListener('DOMContentLoaded', function(){
   cargarDatos();
   renderListaCategorias();
-  // Siempre pedir login al abrir la app
-  localStorage.removeItem('fm_sesion');
+
+  // Verificar si hay sesión activa en sessionStorage (sobrevive recargas)
+  const sesionGuardada = sessionStorage.getItem('fm_sesion_activa');
+  if(sesionGuardada){
+    try{
+      sesionActual = JSON.parse(sesionGuardada);
+      mostrarApp();
+      aplicarPermisos();
+      showView('inicio');
+      return;
+    }catch(e){ sessionStorage.removeItem('fm_sesion_activa'); }
+  }
+
+  // No hay sesión, mostrar login
   ocultarApp();
   mostrarLogin();
 });
