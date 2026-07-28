@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargar datos de ejemplo — FoundationManager</title>
+<style>
+  body{font-family:sans-serif; background:#f4f8f7; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0;}
+  .card{background:#fff; border-radius:16px; padding:30px; max-width:420px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,.1); text-align:center;}
+  h1{color:#0e7c61; font-size:22px; margin-bottom:6px;}
+  p{color:#6b7d79; font-size:14px; margin-bottom:24px;}
+  .btn{display:block; width:100%; padding:14px; background:#0e7c61; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:10px;}
+  .btn.danger{background:#e2574c;}
+  .btn.sec{background:#ffb347; color:#3a2a00;}
+  .status{margin-top:16px; font-size:14px; color:#0e7c61; font-weight:600; min-height:20px;}
+  ul{text-align:left; font-size:13px; color:#6b7d79; margin:0 0 20px; padding-left:20px; line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🌱 Datos de ejemplo</h1>
+  <p>Carga 5 registros de ejemplo en cada módulo de FoundationManager para ver cómo se ve la información.</p>
+  <ul>
+    <li>5 Donantes</li>
+    <li>5 Voluntarios</li>
+    <li>5 Eventos</li>
+    <li>5 Entregas</li>
+    <li>5 Solicitudes</li>
+    <li>5 Proveedores</li>
+    <li>5 Agencias en Directorio</li>
+    <li>5 Personas en Censo</li>
+    <li>3 Fundaciones externas</li>
+    <li>Inventario con artículos</li>
+  </ul>
+  <button class="btn" onclick="cargarEjemplos()">✅ Cargar datos de ejemplo</button>
+  <button class="btn danger" onclick="borrarEjemplos()">🗑️ Borrar TODOS los datos</button>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'fm_data_v1';
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function cargarEjemplos(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  let data = raw ? JSON.parse(raw) : {};
+
+  const hoy = new Date().toISOString().split('T')[0];
+  const fecha = (dias) => {
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().split('T')[0];
+  };
+
+  // DONANTES
+  data.donantes = [
+    {id:uid(), nombre:'María García', negocio:'Supermercado El Sol', direccionFisica:'Calle 5 #12, Aguadilla', direccionPostal:'PO Box 100, Aguadilla PR', tipo:'Monetaria', categoria:'', monto:500, detalles:'Donación mensual', fecha:fecha(-5), telefono:'787-555-0001', whatsapp:'787-555-0001', email:'maria@email.com', notas:'Donante frecuente', documentos:'Sí', lat:'18.4271', lng:'-66.9908'},
+    {id:uid(), nombre:'Carlos Rodríguez', negocio:'Ferretería Central', direccionFisica:'Ave. Principal #45, Mayagüez', direccionPostal:'', tipo:'Especie', categoria:'Alimentos no perecederos', monto:30, detalles:'30 cajas de arroz y granos', fecha:fecha(-10), telefono:'787-555-0002', whatsapp:'', email:'', notas:'', documentos:'No', lat:'18.2013', lng:'-67.1397'},
+    {id:uid(), nombre:'Ana Martínez', negocio:'', direccionFisica:'Urb. Las Flores, Ponce', direccionPostal:'', tipo:'Especie', categoria:'Ropa niños', monto:50, detalles:'50 piezas de ropa de niños', fecha:fecha(-3), telefono:'787-555-0003', whatsapp:'787-555-0003', email:'ana@email.com', notas:'', documentos:'No', lat:'18.0110', lng:'-66.6140'},
+    {id:uid(), nombre:'Pedro Torres', negocio:'Farmacia San Pedro', direccionFisica:'Calle Real #8, Arecibo', direccionPostal:'', tipo:'Especie', categoria:'Medicinas', monto:20, detalles:'20 cajas de medicamentos variados', fecha:fecha(-1), telefono:'787-555-0004', whatsapp:'787-555-0004', email:'pedro@farmacia.com', notas:'Dona cada mes', documentos:'Sí', lat:'18.4733', lng:'-66.7153'},
+    {id:uid(), nombre:'Carmen López', negocio:'Panadería La Fe', direccionFisica:'Barrio Obrero, San Juan', direccionPostal:'', tipo:'Monetaria', categoria:'', monto:250, detalles:'', fecha:fecha(-7), telefono:'787-555-0005', whatsapp:'', email:'carmen@email.com', notas:'', documentos:'No', lat:'18.4655', lng:'-66.1057'},
+  ];
+
+  // VOLUNTARIOS
+  data.voluntarios = [
+    {id:uid(), nombre:'Luis Sánchez', direccion:'Calle Luna #3, Bayamón', disponibilidad:'Sábados y domingos', fundacion:'Fundación Esperanza', otraFundacion:'No', area:'Logística y transporte', telefono:'787-555-1001', whatsapp:'787-555-1001', email:'luis@email.com', horas:45, notas:'Tiene camioneta disponible', lat:'18.3794', lng:'-66.1635'},
+    {id:uid(), nombre:'Rosa Pérez', direccion:'Urb. Villa Verde, Carolina', disponibilidad:'Tardes entre semana', fundacion:'Fundación Esperanza', otraFundacion:'Sí', area:'Redes sociales y comunicación', telefono:'787-555-1002', whatsapp:'787-555-1002', email:'rosa@email.com', horas:30, notas:'', lat:'18.3809', lng:'-65.9574'},
+    {id:uid(), nombre:'José Méndez', direccion:'Sector La Playa, Ponce', disponibilidad:'Fines de semana', fundacion:'Fundación Esperanza', otraFundacion:'No', area:'Primeros auxilios', telefono:'787-555-1003', whatsapp:'', email:'', horas:60, notas:'Enfermero', lat:'17.9988', lng:'-66.6140'},
+    {id:uid(), nombre:'Isabel Cruz', direccion:'Calle 10 #5, Caguas', disponibilidad:'Todo el día los sábados', fundacion:'Fundación Esperanza', otraFundacion:'Sí', area:'Cocina y alimentación', telefono:'787-555-1004', whatsapp:'787-555-1004', email:'isabel@email.com', horas:25, notas:'Cocinera profesional', lat:'18.2341', lng:'-66.0356'},
+    {id:uid(), nombre:'Miguel Ramos', direccion:'Barrio Mineral, Arecibo', disponibilidad:'Cualquier día con aviso', fundacion:'Fundación Esperanza', otraFundacion:'No', area:'Construcción y reparaciones', telefono:'787-555-1005', whatsapp:'787-555-1005', email:'', horas:15, notas:'Contratista', lat:'18.4733', lng:'-66.7153'},
+  ];
+
+  // EVENTOS
+  data.eventos = [
+    {id:uid(), nombre:'Gala Benéfica Anual', fecha:fecha(30), lugar:'Centro de Convenciones, San Juan', presupuesto:5000, asistentes:200, descripcion:'Cena benéfica con subastas y entretenimiento'},
+    {id:uid(), nombre:'Distribución de Alimentos', fecha:fecha(7), lugar:'Plaza Central, Aguadilla', presupuesto:800, asistentes:150, descripcion:'Entrega de canastas de alimentos a familias necesitadas'},
+    {id:uid(), nombre:'Campaña de Ropa de Invierno', fecha:fecha(14), lugar:'Iglesia San José, Mayagüez', presupuesto:300, asistentes:80, descripcion:'Recolección y distribución de ropa'},
+    {id:uid(), nombre:'Jornada de Salud Comunitaria', fecha:fecha(21), lugar:'Cancha del Barrio Obrero, Ponce', presupuesto:1200, asistentes:120, descripcion:'Médicos voluntarios ofrecen consultas gratuitas'},
+    {id:uid(), nombre:'Navidad para Todos', fecha:fecha(45), lugar:'Parque Municipal, Arecibo', presupuesto:2000, asistentes:300, descripcion:'Fiesta navideña con regalos para los niños'},
+  ];
+
+  // ENTREGAS
+  data.entregas = [
+    {id:uid(), participante:'Familia González', tipo:'Artículo', categoria:'Alimentos no perecederos', cantidad:5, fecha:fecha(-2), notas:'Familia de 4 personas'},
+    {id:uid(), participante:'Doña Carmen Vega', tipo:'Efectivo', categoria:'', cantidad:100, fecha:fecha(-4), notas:'Pago de medicamentos'},
+    {id:uid(), participante:'Familia Morales', tipo:'Artículo', categoria:'Ropa niños', cantidad:10, fecha:fecha(-6), notas:'3 niños en el hogar'},
+    {id:uid(), participante:'Don Rafael Ortiz', tipo:'Artículo', categoria:'Medicinas', cantidad:3, fecha:fecha(-1), notas:'Adulto mayor encamado'},
+    {id:uid(), participante:'Familia Rivera', tipo:'Efectivo', categoria:'', cantidad:75, fecha:fecha(-3), notas:'Ayuda con electricidad'},
+  ];
+
+  // SOLICITUDES
+  data.solicitudes = [
+    {id:uid(), nombre:'Teresa Colón', apodo:'Doña Tere', direccionFisica:'Calle 3 #8, Barrio Pueblo, Aguadilla', direccionPostal:'', queSolicita:'Alimentos no perecederos', detalles:'Familia de 5, perdió empleo recientemente', telefono:'787-555-2001', whatsapp:'787-555-2001', email:'', estado:'Pendiente', comentarios:'Urgente', fecha:hoy, lat:'18.4271', lng:'-66.9908'},
+    {id:uid(), nombre:'Roberto Santos', apodo:'Beto', direccionFisica:'Sector Las Palmas, Mayagüez', direccionPostal:'', queSolicita:'Medicinas', detalles:'Diabético, necesita insulina', telefono:'787-555-2002', whatsapp:'', email:'', estado:'En proceso', comentarios:'Coordinando con farmacia', fecha:fecha(-3), lat:'18.2013', lng:'-67.1397'},
+    {id:uid(), nombre:'Familia Herrera', apodo:'', direccionFisica:'Urb. El Plantío, Toa Alta', direccionPostal:'', queSolicita:'Ropa niños', detalles:'4 niños de 2 a 10 años', telefono:'787-555-2003', whatsapp:'787-555-2003', email:'', estado:'Atendido', comentarios:'', fecha:fecha(-5), lat:'18.3886', lng:'-66.2482'},
+    {id:uid(), nombre:'Elena Vargas', apodo:'Nena', direccionFisica:'Calle Sol #15, Ponce', direccionPostal:'', queSolicita:'Productos de higiene personal', detalles:'Mujer de 70 años que vive sola', telefono:'787-555-2004', whatsapp:'', email:'', estado:'Pendiente', comentarios:'', fecha:fecha(-1), lat:'18.0110', lng:'-66.6140'},
+    {id:uid(), nombre:'Juan Delgado', apodo:'Juanito', direccionFisica:'Bo. Coto, Isabela', direccionPostal:'', queSolicita:'Artículos del hogar (general)', detalles:'Perdió todo en inundación', telefono:'787-555-2005', whatsapp:'787-555-2005', email:'', estado:'En proceso', comentarios:'Evaluando necesidades', fecha:fecha(-2), lat:'18.5003', lng:'-67.0228'},
+  ];
+
+  // PROVEEDORES
+  data.proveedores = [
+    {id:uid(), nombre:'José Acosta', negocio:'Distribuidora El Pueblo', direccionFisica:'Zona Industrial, Aguadilla', direccionPostal:'PO Box 500', productos:'Alimentos al por mayor, arroz, granos, aceite', telefono:'787-555-3001', whatsapp:'787-555-3001', email:'jose@distribuidora.com', comentarios:'Descuento del 20% para fundaciones', lat:'18.4271', lng:'-66.9908'},
+    {id:uid(), nombre:'Carmen Nieves', negocio:'Farmacia Comunitaria', direccionFisica:'Calle Real #22, Arecibo', direccionPostal:'', productos:'Medicamentos genéricos, vitaminas, primeros auxilios', telefono:'787-555-3002', whatsapp:'', email:'farmacia@email.com', comentarios:'Dona medicamentos vencidos próximos', lat:'18.4733', lng:'-66.7153'},
+    {id:uid(), nombre:'Rafael Medina', negocio:'Almacén La Esperanza', direccionFisica:'Carr. 2 Km 145, Mayagüez', direccionPostal:'', productos:'Ropa, calzado, artículos del hogar', telefono:'787-555-3003', whatsapp:'787-555-3003', email:'', comentarios:'Acepta donaciones de ropa usada', lat:'18.2013', lng:'-67.1397'},
+    {id:uid(), nombre:'María Reyes', negocio:'Transportes MR', direccionFisica:'Bayamón', direccionPostal:'', productos:'Transporte y logística para entregas', telefono:'787-555-3004', whatsapp:'787-555-3004', email:'mr@transporte.com', comentarios:'Tarifa especial para fundaciones sin fines de lucro', lat:'18.3794', lng:'-66.1635'},
+    {id:uid(), nombre:'Antonio Flores', negocio:'Imprenta Digital PR', direccionFisica:'Hato Rey, San Juan', direccionPostal:'', productos:'Flyers, banners, materiales de campaña', telefono:'787-555-3005', whatsapp:'', email:'info@imprenta.com', comentarios:'Primer orden con 30% de descuento', lat:'18.4108', lng:'-66.0603'},
+  ];
+
+  // DIRECTORIO
+  data.directorio = [
+    {id:uid(), nombre:'Departamento de la Familia', tipo:'Gubernamental', telefono:'787-294-4900', direccion:'Miramar, San Juan', email:'info@familia.pr.gov', comentarios:'Ayuda económica y servicios sociales. L-V 8am-4:30pm', lat:'18.4558', lng:'-66.0771'},
+    {id:uid(), nombre:'Hospital Regional Dr. Ramón Emeterio Betances', tipo:'Hospitalaria', telefono:'787-835-2525', direccion:'Mayagüez', email:'', comentarios:'Emergencias 24/7. Servicio social disponible', lat:'18.2013', lng:'-67.1397'},
+    {id:uid(), nombre:'ASSMCA — Salud Mental', tipo:'Gubernamental', telefono:'787-763-7575', direccion:'Río Piedras, San Juan', email:'', comentarios:'Servicios de salud mental y abuso de sustancias', lat:'18.3984', lng:'-66.0548'},
+    {id:uid(), nombre:'Banco de Alimentos de PR', tipo:'Comunitaria', telefono:'787-725-8050', direccion:'Santurce, San Juan', email:'info@bancodealimentospr.org', comentarios:'Distribución de alimentos a organizaciones. L-V 8am-4pm', lat:'18.4516', lng:'-66.0814'},
+    {id:uid(), nombre:'Cruz Roja Americana — PR', tipo:'Comunitaria', telefono:'787-759-7979', direccion:'Miramar, San Juan', email:'', comentarios:'Emergencias y desastres naturales. Disponible 24/7', lat:'18.4558', lng:'-66.0771'},
+  ];
+
+  // CENSO PERSONAS
+  data.censoPersonas = [
+    {id:uid(), nombre:'Doña Rosa Figueroa', apodo:'Mamá Rosa', pueblo:'Aguadilla', barrio:'Barrio Borinquen', direccion:'Calle 4 #22, frente a la escuela', tipo:'Adulto mayor solo', personasHogar:1, necesidades:'Medicinas', detallesNecesidades:'Necesita medicamentos para la presión y diabetes', telefono:'787-555-4001', whatsapp:'', contactoAlterno:'Hija Carmen: 787-555-4010', estado:'Necesita ayuda', comentarios:'Visitar los martes', fecha:hoy, lat:'18.4271', lng:'-66.9908'},
+    {id:uid(), nombre:'Familia Collazo Vega', apodo:'', pueblo:'Mayagüez', barrio:'Sector Sur', direccion:'Calle Betances #5', tipo:'Familia en necesidad', personasHogar:6, necesidades:'Alimentos no perecederos', detallesNecesidades:'6 personas, 3 niños menores de 5 años', telefono:'787-555-4002', whatsapp:'787-555-4002', contactoAlterno:'', estado:'En proceso', comentarios:'Recibieron canasta la semana pasada', fecha:fecha(-5), lat:'18.2013', lng:'-67.1397'},
+    {id:uid(), nombre:'Don Pablo Ortiz', apodo:'Don Pablo', pueblo:'Ponce', barrio:'Barrio Maragüez', direccion:'Bo. Maragüez Km 3', tipo:'Encamado', personasHogar:2, necesidades:'Pañales para adultos', detallesNecesidades:'Encamado desde hace 2 años, esposa lo cuida', telefono:'787-555-4003', whatsapp:'', contactoAlterno:'Esposa Luz: mismo número', estado:'Necesita ayuda', comentarios:'Acceso difícil por camino de tierra', fecha:fecha(-2), lat:'18.0110', lng:'-66.6140'},
+    {id:uid(), nombre:'Familia Reyes Torres', apodo:'', pueblo:'Arecibo', barrio:'Barrio Islote', direccion:'Carr. 681 #45', tipo:'Familia en necesidad', personasHogar:4, necesidades:'Artículos del hogar (general)', detallesNecesidades:'Perdieron muebles y electrodomésticos en inundación', telefono:'787-555-4004', whatsapp:'787-555-4004', contactoAlterno:'', estado:'En proceso', comentarios:'', fecha:fecha(-3), lat:'18.4733', lng:'-66.7153'},
+    {id:uid(), nombre:'Carmen Díaz Morales', apodo:'Carmencita', pueblo:'Bayamón', barrio:'Villa del Rey', direccion:'Calle 12 #8, Villa del Rey', tipo:'Discapacitado', personasHogar:1, necesidades:'Equipo médico (sillas de ruedas, andadores, etc.)', detallesNecesidades:'Necesita silla de ruedas y andador', telefono:'787-555-4005', whatsapp:'787-555-4005', contactoAlterno:'Vecina Petra: 787-555-4015', estado:'Necesita ayuda', comentarios:'Vive en primer piso, acceso fácil', fecha:fecha(-1), lat:'18.3794', lng:'-66.1635'},
+  ];
+
+  // CENSO FUNDACIONES
+  data.censoFundaciones = [
+    {id:uid(), nombre:'Fundación Manos Unidas PR', pueblo:'San Juan', barrio:'Santurce', telefono:'787-555-5001', whatsapp:'787-555-5001', email:'info@manosunidas.org', web:'www.manosunidas.org', facebook:'facebook.com/manosunidas', instagram:'@manosunidas_pr', director:'Dra. Elena Vásquez', secretario:'Lic. Mario Ortiz', tesorero:'CPA Ana Rosa', directiva:'', registro:'2018-001', ein:'66-0001234', estatus:'501(c)(3)', tienen:'Ropa adultos, artículos escolares', necesitan:'Alimentos no perecederos, pañales', comentarios:'Sirven el área metropolitana. L-V 9am-5pm', lat:'18.4516', lng:'-66.0814'},
+    {id:uid(), nombre:'Fundación Luz de Esperanza', pueblo:'Ponce', barrio:'Sector Sur', telefono:'787-555-5002', whatsapp:'787-555-5002', email:'luz@esperanza.org', web:'', facebook:'', instagram:'@luzesperanza', director:'Rev. Carlos Santos', secretario:'', tesorero:'María Colón', directiva:'', registro:'2015-045', ein:'66-0005678', estatus:'501(c)(3)', tienen:'Medicinas, primeros auxilios', necesitan:'Ropa niños, alimentos', comentarios:'Especializados en ayuda médica', lat:'18.0110', lng:'-66.6140'},
+    {id:uid(), nombre:'Centro Comunitario Arecibo', pueblo:'Arecibo', barrio:'Barrio Pueblo', telefono:'787-555-5003', whatsapp:'', email:'centro@arecibo.org', web:'', facebook:'facebook.com/centroarecibo', instagram:'', director:'Ing. Roberto Méndez', secretario:'Patricia Cruz', tesorero:'', directiva:'Vocal: Juan Torres', registro:'', ein:'', estatus:'En proceso', tienen:'Agua, cobijas', necesitan:'Electrodomésticos, muebles', comentarios:'Organización nueva, en proceso de certificación', lat:'18.4733', lng:'-66.7153'},
+  ];
+
+  // INVENTARIO — ajustes para que haya artículos
+  data.donantes.push(
+    {id:uid(), nombre:'Donación inicial inventario', negocio:'', direccionFisica:'', direccionPostal:'', tipo:'Especie', categoria:'Agua', monto:50, detalles:'50 botellas de agua', fecha:hoy, telefono:'', whatsapp:'', email:'', notas:'', documentos:'No', lat:'', lng:''},
+    {id:uid(), nombre:'Donación inicial inventario', negocio:'', direccionFisica:'', direccionPostal:'', tipo:'Especie', categoria:'Pañales', monto:30, detalles:'30 paquetes de pañales', fecha:hoy, telefono:'', whatsapp:'', email:'', notas:'', documentos:'No', lat:'', lng:''},
+    {id:uid(), nombre:'Donación inicial inventario', negocio:'', direccionFisica:'', direccionPostal:'', tipo:'Especie', categoria:'Ropa niños', monto:25, detalles:'25 piezas', fecha:hoy, telefono:'', whatsapp:'', email:'', notas:'', documentos:'No', lat:'', lng:''},
+    {id:uid(), nombre:'Donación inicial inventario', negocio:'', direccionFisica:'', direccionPostal:'', tipo:'Monetaria', categoria:'', monto:825, detalles:'', fecha:hoy, telefono:'', whatsapp:'', email:'', notas:'Total donaciones monetarias de ejemplo', documentos:'No', lat:'', lng:''}
+  );
+
+  // Preservar configuración existente
+  if(!data.orgName) data.orgName = 'Fundación Esperanza PR';
+  if(!data.orgInfo) data.orgInfo = {
+    mision: 'Brindar ayuda humanitaria a las familias más necesitadas de Puerto Rico con dignidad y amor.',
+    vision: 'Ser la organización líder en ayuda comunitaria de Puerto Rico.',
+    direccion: 'Calle Principal #1, Aguadilla, PR 00603',
+    telefono: '787-555-0000',
+    whatsapp: '787-555-0000',
+    email: 'info@fundacionesperanza.org',
+    web: 'www.fundacionesperanza.org',
+    facebook: 'facebook.com/fundacionesperanzapr',
+    instagram: '@fundacionesperanzapr',
+    registro: '2020-123',
+    ein: '66-1234567',
+    estatus: '501(c)(3)',
+    director: 'Diana Vélez',
+    notasLegales: 'Documentos registrados en el Departamento de Estado de PR'
+  };
+
+  if(!data.auditoria) data.auditoria = [];
+  if(!data.solicitudes) data.solicitudes = data.solicitudes || [];
+  if(!data.categoriasExtra) data.categoriasExtra = [];
+  if(!data.syncOpciones) data.syncOpciones = {};
+
+  localStorage.setItem('fm_data_v1', JSON.stringify(data));
+  document.getElementById('status').textContent = '✅ ¡Datos cargados! Abre la app ahora.';
+  document.getElementById('status').style.color = '#0e7c61';
+}
+
+function borrarEjemplos(){
+  if(!confirm('⚠️ Esto borrará TODOS los datos de la app. ¿Estás seguro?')) return;
+  localStorage.removeItem('fm_data_v1');
+  document.getElementById('status').textContent = '🗑️ Datos borrados. La app quedó en blanco.';
+  document.getElementById('status').style.color = '#e2574c';
+}
+</script>
+</body>
+</html>
