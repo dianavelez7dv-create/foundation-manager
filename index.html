@@ -210,6 +210,10 @@
         <option value="">Selecciona un usuario...</option>
       </select>
     </div>
+    <div class="login-field" id="loginManualWrap" style="display:none;">
+      <label>O escribe tu usuario manualmente</label>
+      <input id="loginUsuarioManual" placeholder="Ej. admin" autocomplete="off">
+    </div>
     <div class="login-field">
       <label>Contraseña</label>
       <input type="password" id="loginClave" placeholder="••••••••" onkeydown="if(event.key==='Enter') iniciarSesion()">
@@ -1258,19 +1262,30 @@ async function guardarUsuarios(usuarios){
 }
 
 async function iniciarSesion(){
-  const usuarioId = document.getElementById('loginUsuario').value;
+  let usuarioId = document.getElementById('loginUsuario').value;
+  const usuarioManual = document.getElementById('loginUsuarioManual')?.value?.trim();
   const clave = document.getElementById('loginClave').value;
   const err = document.getElementById('loginError');
   const btn = document.querySelector('.login-btn');
 
-  if(!usuarioId){ err.textContent='⚠️ Selecciona un usuario'; err.style.display='block'; return; }
+  if(!usuarioId && !usuarioManual){ err.textContent='⚠️ Selecciona o escribe un usuario'; err.style.display='block'; return; }
   if(!clave){ err.textContent='⚠️ Escribe tu contraseña'; err.style.display='block'; return; }
 
   btn.textContent = '⏳ Verificando...';
   btn.disabled = true;
 
   const usuarios = await getUsuarios();
-  const user = usuarios.find(u=>u.id===usuarioId && u.clave===clave);
+  let user;
+  if(usuarioId){
+    user = usuarios.find(u=>u.id===usuarioId && u.clave===clave);
+  } else {
+    // Buscar por nombre de usuario manual
+    user = usuarios.find(u=>u.usuario===usuarioManual && u.clave===clave);
+    // Si no encuentra, intentar con el admin por defecto
+    if(!user && usuarioManual==='admin' && clave==='admin123'){
+      user = USUARIOS_DEFAULT[0];
+    }
+  }
 
   btn.textContent = 'Entrar →';
   btn.disabled = false;
@@ -1306,6 +1321,14 @@ async function mostrarLogin(){
   const sel = document.getElementById('loginUsuario');
   sel.innerHTML = '<option value="">Selecciona un usuario...</option>' +
     usuarios.map(u=>`<option value="${u.id}">${u.nombre} (${u.rol})</option>`).join('');
+
+  // Si no hay usuarios mostrar campo manual
+  const manual = document.getElementById('loginManualWrap');
+  if(usuarios.length === 0){
+    manual.style.display = 'block';
+  } else {
+    manual.style.display = 'none';
+  }
   document.getElementById('loginScreen').style.display='flex';
 }
 
