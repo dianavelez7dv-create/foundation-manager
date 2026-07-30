@@ -220,6 +220,10 @@
     </div>
     <button class="login-btn" onclick="iniciarSesion()">Entrar →</button>
     <p class="login-error" id="loginError">⚠️ Usuario o contraseña incorrectos</p>
+    <div style="margin-top:16px; border-top:1px solid #eee; padding-top:16px;">
+      <p style="font-size:13px; color:#6b7d79; margin:0 0 8px;">¿No aparece tu usuario? Usa acceso de emergencia:</p>
+      <button onclick="entrarComoAdmin()" style="width:100%; padding:12px; background:#f4f8f7; color:#0e7c61; border:2px solid #0e7c61; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer;">🔑 Entrar como Admin</button>
+    </div>
   </div>
 </div>
 
@@ -1259,6 +1263,26 @@ async function guardarUsuarios(usuarios){
       if(json.metadata?.id) localStorage.setItem('fm_usuarios_bin_id', json.metadata.id);
     }
   } catch(e){ console.log('Error sync usuarios:', e); }
+}
+
+function entrarComoAdmin(){
+  // Restaurar usuario admin en localStorage
+  const usuarios = [...USUARIOS_DEFAULT];
+  localStorage.setItem('fm_usuarios', JSON.stringify(usuarios));
+
+  sesionActual = USUARIOS_DEFAULT[0];
+  localStorage.setItem('fm_sesion_activa', JSON.stringify({
+    id: sesionActual.id,
+    nombre: sesionActual.nombre,
+    rol: sesionActual.rol,
+    ts: Date.now()
+  }));
+  document.getElementById('loginScreen').style.display='none';
+  mostrarApp();
+  aplicarPermisos();
+  renderInicio();
+  showView('inicio');
+  showToast('Entrando como Admin — recuerda cambiar la contraseña');
 }
 
 async function iniciarSesion(){
