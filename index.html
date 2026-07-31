@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0e7c61">
-<title>FoundationManager</title>
+<title>FoundationManager v2.1</title>
 <style>
   :root{
     --app-color:#0e7c61;       /* verde principal */
@@ -455,10 +455,21 @@
   <!-- SYNC -->
   <div class="view" id="view-sync">
     <h2>🔄 Sincronización</h2>
-    <p class="muted">Comparte información con otras fundaciones usando un código secreto compartido. Solo las fundaciones con el mismo código pueden ver los datos.</p>
+
+    <div class="card" style="border-left:5px solid var(--app-color);">
+      <h3>☁️ Sincronización entre dispositivos</h3>
+      <p class="muted">Mantén todos tus dispositivos actualizados con los mismos datos.</p>
+      <div id="supabaseStatus" style="font-size:14px; margin:8px 0;">Toca "Probar" para verificar la conexión</div>
+      <div class="btn-row">
+        <button class="btn" onclick="probarSupabase()">🔌 Probar</button>
+        <button class="btn secondary" onclick="subirTodoASupabase()">⬆️ Subir</button>
+        <button class="btn" style="background:#eef3f1; color:var(--app-color);" onclick="bajarDeSupabase()">⬇️ Bajar</button>
+      </div>
+    </div>
 
     <div class="card">
-      <h3>🔐 Tu clave JSONBin (privada)</h3>
+      <h3>🤝 Compartir con otras fundaciones</h3>
+      <p class="muted">Comparte información con otras fundaciones usando un código secreto compartido.</p>
       <p class="muted">Esta clave se guarda solo en tu dispositivo, nunca en el código. Obténla en <a href="https://jsonbin.io" target="_blank" style="color:var(--app-color);">jsonbin.io</a> → API Keys → Master Key.</p>
       <label>Master Key</label>
       <input id="syncApiKey" type="password" placeholder="$2a$10$...">
@@ -1208,25 +1219,11 @@ const PERMISOS = {
 };
 
 async function getUsuarios(){
-  const key = getJsonBinKey();
-  // Siempre cargar locales primero como base
-  const locales = getUsuariosLocal();
-  if(!key) return locales;
-  try{
-    const binId = localStorage.getItem('fm_usuarios_bin_id');
-    if(binId){
-      const res = await fetch(`${JSONBIN_BASE}/${binId}/latest`, {
-        headers:{'X-Master-Key': key}
-      });
-      const json = await res.json();
-      if(json.record?.usuarios && json.record.usuarios.length > 0){
-        // Guardar en local como respaldo
-        localStorage.setItem('fm_usuarios', JSON.stringify(json.record.usuarios));
-        return json.record.usuarios;
-      }
-    }
-    return locales;
-  } catch(e){ return locales; }
+  // Intentar Supabase primero
+  const deSupa = await getUsuariosSupabase();
+  if(deSupa && deSupa.length > 0) return deSupa;
+  // Fallback a local
+  return getUsuariosLocal();
 }
 
 function getUsuariosLocal(){
@@ -1235,7 +1232,6 @@ function getUsuariosLocal(){
     const lista = JSON.parse(raw);
     if(lista && lista.length > 0) return lista;
   }catch(e){}
-  // Siempre devolver al menos el admin por defecto
   const defaults = [...USUARIOS_DEFAULT];
   localStorage.setItem('fm_usuarios', JSON.stringify(defaults));
   return defaults;
@@ -1243,26 +1239,11 @@ function getUsuariosLocal(){
 
 async function guardarUsuarios(usuarios){
   localStorage.setItem('fm_usuarios', JSON.stringify(usuarios));
-  const key = getJsonBinKey();
-  if(!key) return;
   try{
-    const binId = localStorage.getItem('fm_usuarios_bin_id');
-    if(binId){
-      await fetch(`${JSONBIN_BASE}/${binId}`, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json','X-Master-Key':key},
-        body: JSON.stringify({usuarios})
-      });
-    } else {
-      const res = await fetch(JSONBIN_BASE, {
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':USUARIOS_BIN_NAME,'X-Bin-Private':'false'},
-        body: JSON.stringify({usuarios})
-      });
-      const json = await res.json();
-      if(json.metadata?.id) localStorage.setItem('fm_usuarios_bin_id', json.metadata.id);
+    for(const u of usuarios){
+      await sbFetch('usuarios', 'POST', [toSB('usuarios', u)]);
     }
-  } catch(e){ console.log('Error sync usuarios:', e); }
+  } catch(e){ console.log('Error sync usuarios Supabase:', e); }
 }
 
 function entrarComoAdmin(){
@@ -1318,18 +1299,24 @@ async function iniciarSesion(){
 
   sesionActual = user;
   localStorage.setItem('fm_sesion_activa', JSON.stringify({
-    id: user.id,
-    nombre: user.nombre,
-    rol: user.rol,
-    ts: Date.now()
+    id: user.id, nombre: user.nombre, rol: user.rol, ts: Date.now()
   }));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('loginClave').value='';
   err.style.display='none';
   mostrarApp();
   aplicarPermisos();
-  renderInicio();
-  showView('inicio');
+
+  // Descargar datos frescos de Supabase
+  showToast('⏳ Sincronizando datos...');
+  descargarDeSupabase().then(ok=>{
+    if(ok) showToast('✅ Datos sincronizados');
+    renderInicio();
+    showView('inicio');
+  }).catch(()=>{
+    renderInicio();
+    showView('inicio');
+  });
 }
 
 function cerrarSesion(){
@@ -1530,6 +1517,11 @@ function cargarDatos(){
 
 function guardarDatos(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Sincronizar con Supabase
+  sincronizarConSupabase().then(ok=>{
+    if(ok) console.log('✅ Supabase sync OK');
+    else console.warn('⚠️ Supabase sync falló');
+  });
 }
 
 function showToast(msg){
@@ -3478,7 +3470,250 @@ function imprimirDesdeModal(){
 
 
 
-const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+const SUPABASE_URL = 'https://hwklyjsbfktnnxlycaci.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3a2x5anNiZmt0bm54bHljYWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTE1MzYsImV4cCI6MjA5MzQ4NzUzNn0.CWlZXLvi8MLky-tdQ_zRZTh0_jWuVM4_c8dzmtpSyyA';
+const SB_SCHEMA = 'foundation';
+
+async function sbFetch(tabla, metodo='GET', body=null, filtro=''){
+  const url = `${SUPABASE_URL}/rest/v1/${tabla}${filtro}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Accept-Profile': SB_SCHEMA,
+    'Content-Profile': SB_SCHEMA
+  };
+  if(metodo === 'POST'){
+    headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+  }
+  const opts = { method: metodo, headers };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error(`${res.status}: ${err}`);
+  }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : [];
+}
+
+// Convertir objeto de la app al formato de Supabase
+function toSB(tabla, obj){
+  if(tabla === 'donantes') return {
+    id:obj.id, nombre:obj.nombre, negocio:obj.negocio||null,
+    direccion_fisica:obj.direccionFisica||null, direccion_postal:obj.direccionPostal||null,
+    tipo:obj.tipo||'Monetaria', categoria:obj.categoria||null,
+    monto:obj.monto||0, detalles:obj.detalles||null, fecha:obj.fecha||null,
+    telefono:obj.telefono||null, whatsapp:obj.whatsapp||null, email:obj.email||null,
+    notas:obj.notas||null, documentos:obj.documentos||'No', lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'voluntarios') return {
+    id:obj.id, nombre:obj.nombre, direccion:obj.direccion||null,
+    disponibilidad:obj.disponibilidad||null, fundacion:obj.fundacion||null,
+    otra_fundacion:obj.otraFundacion||'No', area:obj.area||null,
+    telefono:obj.telefono||null, whatsapp:obj.whatsapp||null, email:obj.email||null,
+    horas:obj.horas||0, notas:obj.notas||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'eventos') return {
+    id:obj.id, nombre:obj.nombre, fecha:obj.fecha||null, lugar:obj.lugar||null,
+    presupuesto:obj.presupuesto||0, asistentes:obj.asistentes||0, descripcion:obj.descripcion||null
+  };
+  if(tabla === 'entregas') return {
+    id:obj.id, participante:obj.participante, tipo:obj.tipo||'Efectivo',
+    categoria:obj.categoria||null, cantidad:obj.cantidad||0, fecha:obj.fecha||null, notas:obj.notas||null
+  };
+  if(tabla === 'solicitudes') return {
+    id:obj.id, nombre:obj.nombre, apodo:obj.apodo||null,
+    direccion_fisica:obj.direccionFisica||null, direccion_postal:obj.direccionPostal||null,
+    que_solicita:obj.queSolicita||null, detalles:obj.detalles||null,
+    telefono:obj.telefono||null, whatsapp:obj.whatsapp||null, email:obj.email||null,
+    estado:obj.estado||'Pendiente', comentarios:obj.comentarios||null,
+    fecha:obj.fecha||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'proveedores') return {
+    id:obj.id, nombre:obj.nombre||null, negocio:obj.negocio||null,
+    direccion_fisica:obj.direccionFisica||null, direccion_postal:obj.direccionPostal||null,
+    productos:obj.productos||null, telefono:obj.telefono||null, whatsapp:obj.whatsapp||null,
+    email:obj.email||null, comentarios:obj.comentarios||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'directorio') return {
+    id:obj.id, nombre:obj.nombre, tipo:obj.tipo||'Gubernamental',
+    telefono:obj.telefono||null, direccion:obj.direccion||null,
+    email:obj.email||null, comentarios:obj.comentarios||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'censo_personas') return {
+    id:obj.id, nombre:obj.nombre, apodo:obj.apodo||null,
+    pueblo:obj.pueblo||null, barrio:obj.barrio||null, direccion:obj.direccion||null,
+    tipo:obj.tipo||null, personas_hogar:obj.personasHogar||0,
+    necesidades:obj.necesidades||null, detalles_necesidades:obj.detallesNecesidades||null,
+    telefono:obj.telefono||null, whatsapp:obj.whatsapp||null,
+    contacto_alterno:obj.contactoAlterno||null, estado:obj.estado||'Necesita ayuda',
+    comentarios:obj.comentarios||null, fecha:obj.fecha||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'censo_fundaciones') return {
+    id:obj.id, nombre:obj.nombre, pueblo:obj.pueblo||null, barrio:obj.barrio||null,
+    telefono:obj.telefono||null, whatsapp:obj.whatsapp||null, email:obj.email||null,
+    web:obj.web||null, facebook:obj.facebook||null, instagram:obj.instagram||null,
+    director:obj.director||null, secretario:obj.secretario||null, tesorero:obj.tesorero||null,
+    directiva:obj.directiva||null, registro:obj.registro||null, ein:obj.ein||null,
+    estatus:obj.estatus||null, tienen:obj.tienen||null, necesitan:obj.necesitan||null,
+    comentarios:obj.comentarios||null, lat:obj.lat||null, lng:obj.lng||null
+  };
+  if(tabla === 'auditoria') return {
+    id:obj.id, accion:obj.accion, modulo:obj.modulo,
+    descripcion:obj.descripcion||null, usuario:obj.usuario||null,
+    usuario_rol:obj.usuarioRol||null, fecha:obj.fecha||null
+  };
+  if(tabla === 'usuarios') return {
+    id:obj.id, nombre:obj.nombre, usuario:obj.usuario, clave:obj.clave, rol:obj.rol
+  };
+  return obj;
+}
+
+// Convertir de Supabase al formato de la app
+function fromSB(tabla, obj){
+  if(tabla === 'donantes') return {
+    id:obj.id, nombre:obj.nombre, negocio:obj.negocio||'',
+    direccionFisica:obj.direccion_fisica||'', direccionPostal:obj.direccion_postal||'',
+    tipo:obj.tipo||'Monetaria', categoria:obj.categoria||'',
+    monto:obj.monto||0, detalles:obj.detalles||'', fecha:obj.fecha||'',
+    telefono:obj.telefono||'', whatsapp:obj.whatsapp||'', email:obj.email||'',
+    notas:obj.notas||'', documentos:obj.documentos||'No', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'voluntarios') return {
+    id:obj.id, nombre:obj.nombre, direccion:obj.direccion||'',
+    disponibilidad:obj.disponibilidad||'', fundacion:obj.fundacion||'',
+    otraFundacion:obj.otra_fundacion||'No', area:obj.area||'',
+    telefono:obj.telefono||'', whatsapp:obj.whatsapp||'', email:obj.email||'',
+    horas:obj.horas||0, notas:obj.notas||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'eventos') return {
+    id:obj.id, nombre:obj.nombre, fecha:obj.fecha||'', lugar:obj.lugar||'',
+    presupuesto:obj.presupuesto||0, asistentes:obj.asistentes||0, descripcion:obj.descripcion||''
+  };
+  if(tabla === 'entregas') return {
+    id:obj.id, participante:obj.participante, tipo:obj.tipo||'Efectivo',
+    categoria:obj.categoria||'', cantidad:obj.cantidad||0, fecha:obj.fecha||'', notas:obj.notas||''
+  };
+  if(tabla === 'solicitudes') return {
+    id:obj.id, nombre:obj.nombre, apodo:obj.apodo||'',
+    direccionFisica:obj.direccion_fisica||'', direccionPostal:obj.direccion_postal||'',
+    queSolicita:obj.que_solicita||'', detalles:obj.detalles||'',
+    telefono:obj.telefono||'', whatsapp:obj.whatsapp||'', email:obj.email||'',
+    estado:obj.estado||'Pendiente', comentarios:obj.comentarios||'',
+    fecha:obj.fecha||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'proveedores') return {
+    id:obj.id, nombre:obj.nombre||'', negocio:obj.negocio||'',
+    direccionFisica:obj.direccion_fisica||'', direccionPostal:obj.direccion_postal||'',
+    productos:obj.productos||'', telefono:obj.telefono||'', whatsapp:obj.whatsapp||'',
+    email:obj.email||'', comentarios:obj.comentarios||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'directorio') return {
+    id:obj.id, nombre:obj.nombre, tipo:obj.tipo||'Gubernamental',
+    telefono:obj.telefono||'', direccion:obj.direccion||'',
+    email:obj.email||'', comentarios:obj.comentarios||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'censo_personas') return {
+    id:obj.id, nombre:obj.nombre, apodo:obj.apodo||'',
+    pueblo:obj.pueblo||'', barrio:obj.barrio||'', direccion:obj.direccion||'',
+    tipo:obj.tipo||'', personasHogar:obj.personas_hogar||0,
+    necesidades:obj.necesidades||'', detallesNecesidades:obj.detalles_necesidades||'',
+    telefono:obj.telefono||'', whatsapp:obj.whatsapp||'',
+    contactoAlterno:obj.contacto_alterno||'', estado:obj.estado||'Necesita ayuda',
+    comentarios:obj.comentarios||'', fecha:obj.fecha||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'censo_fundaciones') return {
+    id:obj.id, nombre:obj.nombre, pueblo:obj.pueblo||'', barrio:obj.barrio||'',
+    telefono:obj.telefono||'', whatsapp:obj.whatsapp||'', email:obj.email||'',
+    web:obj.web||'', facebook:obj.facebook||'', instagram:obj.instagram||'',
+    director:obj.director||'', secretario:obj.secretario||'', tesorero:obj.tesorero||'',
+    directiva:obj.directiva||'', registro:obj.registro||'', ein:obj.ein||'',
+    estatus:obj.estatus||'', tienen:obj.tienen||'', necesitan:obj.necesitan||'',
+    comentarios:obj.comentarios||'', lat:obj.lat||'', lng:obj.lng||''
+  };
+  if(tabla === 'usuarios') return {
+    id:obj.id, nombre:obj.nombre, usuario:obj.usuario, clave:obj.clave, rol:obj.rol
+  };
+  return obj;
+}
+
+async function sincronizarConSupabase(){
+  try{
+    const tablas = [
+      ['donantes', data.donantes],
+      ['voluntarios', data.voluntarios],
+      ['eventos', data.eventos],
+      ['entregas', data.entregas],
+      ['solicitudes', data.solicitudes],
+      ['proveedores', data.proveedores],
+      ['directorio', data.directorio],
+      ['censo_personas', data.censoPersonas],
+      ['censo_fundaciones', data.censoFundaciones],
+    ];
+
+    for(const [tabla, lista] of tablas){
+      if(lista && lista.length > 0){
+        const rows = lista.map(obj => toSB(tabla, obj));
+        console.log(`Subiendo ${rows.length} registros a ${tabla}...`);
+        await sbFetch(tabla, 'POST', rows, '');
+        console.log(`✅ ${tabla} sincronizado`);
+      }
+    }
+
+    if(data.auditoria && data.auditoria.length > 0){
+      const rows = data.auditoria.slice(0,50).map(a => toSB('auditoria', a));
+      await sbFetch('auditoria', 'POST', rows, '');
+    }
+
+    console.log('✅ Sincronización completa con Supabase');
+    return true;
+  } catch(e){
+    console.error('❌ Error sincronizando con Supabase:', e.message);
+    return false;
+  }
+}
+
+async function descargarDeSupabase(){
+  try{
+    const tablas = ['donantes','voluntarios','eventos','entregas','solicitudes',
+                    'proveedores','directorio','censo_personas','censo_fundaciones'];
+
+    for(const tabla of tablas){
+      const rows = await sbFetch(tabla, 'GET', null, '?order=creado_en.asc');
+      const key = tabla === 'censo_personas' ? 'censoPersonas' :
+                  tabla === 'censo_fundaciones' ? 'censoFundaciones' : tabla;
+      data[key] = rows.map(r => fromSB(tabla, r));
+    }
+
+    guardarDatos();
+    return true;
+  } catch(e){
+    console.error('Error descargando:', e);
+    return false;
+  }
+}
+
+async function getUsuariosSupabase(){
+  try{
+    const rows = await sbFetch('usuarios', 'GET');
+    if(rows && rows.length > 0){
+      const usuarios = rows.map(r => fromSB('usuarios', r));
+      localStorage.setItem('fm_usuarios', JSON.stringify(usuarios));
+      return usuarios;
+    }
+    return null;
+  } catch(e){ return null; }
+}
+
+async function guardarUsuarioSupabase(usuario){
+  try{
+    await sbFetch('usuarios', 'POST', [toSB('usuarios', usuario)]);
+    return true;
+  } catch(e){ return false; }
+}
+
+
 
 function getJsonBinKey(){
   return localStorage.getItem('fm_jsonbin_key') || '';
@@ -3491,6 +3726,69 @@ function guardarApiKey(){
   document.getElementById('syncApiKeyStatus').textContent = '✅ Clave guardada en este dispositivo';
   document.getElementById('syncApiKey').value = '';
   showToast('Clave guardada ✅');
+}
+
+async function probarSupabase(){
+  const el = document.getElementById('supabaseStatus');
+  el.textContent = '⏳ Probando conexión...';
+  try{
+    const rows = await sbFetch('usuarios', 'GET');
+    el.textContent = `✅ Conexión exitosa — ${rows.length} usuario(s) en Supabase`;
+    el.style.color = 'var(--app-color)';
+  } catch(e){
+    el.textContent = `❌ Error: ${e.message}`;
+    el.style.color = 'var(--danger)';
+  }
+}
+
+async function subirTodoASupabase(){
+  const el = document.getElementById('supabaseStatus');
+  el.textContent = '⏳ Subiendo datos...';
+  try{
+    const tablas = [
+      ['donantes', data.donantes],
+      ['voluntarios', data.voluntarios],
+      ['eventos', data.eventos],
+      ['entregas', data.entregas],
+      ['solicitudes', data.solicitudes],
+      ['proveedores', data.proveedores],
+      ['directorio', data.directorio],
+      ['censo_personas', data.censoPersonas],
+      ['censo_fundaciones', data.censoFundaciones],
+    ];
+    let total = 0;
+    for(const [tabla, lista] of tablas){
+      if(lista && lista.length > 0){
+        el.textContent = `⏳ Subiendo ${tabla}...`;
+        const rows = lista.map(obj => toSB(tabla, obj));
+        await sbFetch(tabla, 'POST', rows, '');
+        total += rows.length;
+      }
+    }
+    el.textContent = `✅ ${total} registros subidos a Supabase`;
+    el.style.color = 'var(--app-color)';
+    showToast('✅ Datos subidos a Supabase');
+  } catch(e){
+    el.textContent = `❌ Error: ${e.message}`;
+    el.style.color = 'var(--danger)';
+  }
+}
+
+async function bajarDeSupabase(){
+  const el = document.getElementById('supabaseStatus');
+  el.textContent = '⏳ Descargando datos...';
+  try{
+    const ok = await descargarDeSupabase();
+    if(ok){
+      el.textContent = '✅ Datos descargados de Supabase';
+      el.style.color = 'var(--app-color)';
+      renderInicio();
+      showToast('✅ Datos actualizados desde Supabase');
+    }
+  } catch(e){
+    el.textContent = `❌ Error: ${e.message}`;
+    el.style.color = 'var(--danger)';
+  }
 }
 
 function renderSync(){
