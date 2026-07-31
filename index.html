@@ -842,6 +842,16 @@
     <input id="eventoAsistentes" type="number" inputmode="numeric" placeholder="0">
     <label>Descripción (opcional)</label>
     <textarea id="eventoDescripcion" rows="2" placeholder="Detalles del evento"></textarea>
+
+    <div style="border-top:1px solid #eee; margin-top:14px; padding-top:14px;">
+      <strong style="font-size:15px; color:var(--app-color);">🙋 Voluntarios asignados</strong>
+      <p class="muted" style="margin-top:4px;">Las horas se sumarán automáticamente al perfil de cada voluntario al guardar.</p>
+      <label>Horas trabajadas en este evento</label>
+      <input id="eventoHoras" type="number" inputmode="decimal" placeholder="Ej. 4" min="0">
+      <label style="margin-top:10px;">Selecciona los voluntarios</label>
+      <div id="eventoVoluntariosList" style="max-height:200px; overflow-y:auto; border:1.5px solid #dde6e3; border-radius:10px; padding:8px; margin-top:4px; background:#fbfdfc;"></div>
+    </div>
+
     <button class="btn" onclick="guardarEvento()">Guardar evento</button>
   </div>
 </div>
@@ -1219,11 +1229,25 @@ const PERMISOS = {
 };
 
 async function getUsuarios(){
-  // Intentar Supabase primero
-  const deSupa = await getUsuariosSupabase();
-  if(deSupa && deSupa.length > 0) return deSupa;
-  // Fallback a local
-  return getUsuariosLocal();
+  // Siempre garantizar al menos el admin local
+  const locales = getUsuariosLocal();
+
+  // Intentar Supabase en segundo plano
+  try{
+    const deSupa = await Promise.race([
+      getUsuariosSupabase(),
+      new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 5000))
+    ]);
+    if(deSupa && deSupa.length > 0){
+      // Guardar en local como respaldo
+      localStorage.setItem('fm_usuarios', JSON.stringify(deSupa));
+      return deSupa;
+    }
+  } catch(e){
+    console.log('Usuarios de Supabase no disponibles, usando locales');
+  }
+
+  return locales;
 }
 
 function getUsuariosLocal(){
@@ -1232,6 +1256,7 @@ function getUsuariosLocal(){
     const lista = JSON.parse(raw);
     if(lista && lista.length > 0) return lista;
   }catch(e){}
+  // SIEMPRE devolver admin por defecto
   const defaults = [...USUARIOS_DEFAULT];
   localStorage.setItem('fm_usuarios', JSON.stringify(defaults));
   return defaults;
@@ -1991,6 +2016,20 @@ function renderVoluntarios(){
 }
 
 /* ---------- EVENTOS ---------- */
+function renderVoluntariosEvento(voluntariosAsignados=[]){
+  const cont = document.getElementById('eventoVoluntariosList');
+  if(data.voluntarios.length === 0){
+    cont.innerHTML = '<p class="muted" style="font-size:13px; padding:4px;">No hay voluntarios registrados aún.</p>';
+    return;
+  }
+  cont.innerHTML = data.voluntarios.map(v=>`
+    <label style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:14px;">
+      <input type="checkbox" value="${v.id}" style="width:18px; height:18px;" ${voluntariosAsignados.includes(v.id)?'checked':''}>
+      <span>${escapeHtml(v.nombre)} <span class="muted">(${v.horas||0} hrs acum.)</span></span>
+    </label>
+  `).join('');
+}
+
 function abrirModalEvento(id){
   document.getElementById('eventoId').value = '';
   document.getElementById('eventoNombre').value = '';
@@ -1999,7 +2038,9 @@ function abrirModalEvento(id){
   document.getElementById('eventoPresupuesto').value = '';
   document.getElementById('eventoAsistentes').value = '';
   document.getElementById('eventoDescripcion').value = '';
+  document.getElementById('eventoHoras').value = '';
   document.getElementById('tituloModalEvento').textContent = 'Nuevo evento';
+  renderVoluntariosEvento([]);
 
   if(id){
     const e = data.eventos.find(x=>x.id===id);
@@ -2011,6 +2052,8 @@ function abrirModalEvento(id){
       document.getElementById('eventoPresupuesto').value = e.presupuesto || 0;
       document.getElementById('eventoAsistentes').value = e.asistentes || 0;
       document.getElementById('eventoDescripcion').value = e.descripcion || '';
+      document.getElementById('eventoHoras').value = e.horasEvento || '';
+      renderVoluntariosEvento(e.voluntarios || []);
       document.getElementById('tituloModalEvento').textContent = 'Editar evento';
     }
   }
@@ -2022,6 +2065,42 @@ function guardarEvento(){
   const nombre = document.getElementById('eventoNombre').value.trim();
   if(!nombre){ showToast('⚠️ Escribe el nombre del evento'); return; }
 
+  // Obtener voluntarios seleccionados
+  const checkboxes = document.querySelectorAll('#eventoVoluntariosList input[type=checkbox]:checked');
+  const voluntariosNuevos = Array.from(checkboxes).map(c=>c.value);
+  const horasEvento = parseFloat(document.getElementById('eventoHoras').value) || 0;
+
+  // Si hay voluntarios y horas, sumar horas a cada voluntario
+  if(voluntariosNuevos.length > 0 && horasEvento > 0){
+    // Obtener voluntarios que estaban antes (para no duplicar horas al editar)
+    const eventoAnterior = id ? data.eventos.find(x=>x.id===id) : null;
+    const voluntariosAnteriores = eventoAnterior?.voluntarios || [];
+    const horasAnteriores = eventoAnterior?.horasEvento || 0;
+
+    voluntariosNuevos.forEach(vid=>{
+      const idx = data.voluntarios.findIndex(v=>v.id===vid);
+      if(idx>=0){
+        // Restar horas anteriores si ya estaba asignado
+        if(voluntariosAnteriores.includes(vid)){
+          data.voluntarios[idx].horas = (Number(data.voluntarios[idx].horas)||0) - horasAnteriores + horasEvento;
+        } else {
+          data.voluntarios[idx].horas = (Number(data.voluntarios[idx].horas)||0) + horasEvento;
+        }
+        data.voluntarios[idx].horas = Math.max(0, data.voluntarios[idx].horas);
+      }
+    });
+
+    // Restar horas a voluntarios que fueron removidos
+    voluntariosAnteriores.forEach(vid=>{
+      if(!voluntariosNuevos.includes(vid)){
+        const idx = data.voluntarios.findIndex(v=>v.id===vid);
+        if(idx>=0){
+          data.voluntarios[idx].horas = Math.max(0, (Number(data.voluntarios[idx].horas)||0) - horasAnteriores);
+        }
+      }
+    });
+  }
+
   const obj = {
     id: id || uid(),
     nombre,
@@ -2029,7 +2108,9 @@ function guardarEvento(){
     lugar: document.getElementById('eventoLugar').value.trim(),
     presupuesto: parseFloat(document.getElementById('eventoPresupuesto').value) || 0,
     asistentes: parseInt(document.getElementById('eventoAsistentes').value) || 0,
-    descripcion: document.getElementById('eventoDescripcion').value.trim()
+    descripcion: document.getElementById('eventoDescripcion').value.trim(),
+    horasEvento,
+    voluntarios: voluntariosNuevos
   };
 
   if(id){
@@ -2077,6 +2158,7 @@ function renderEventos(){
             <span class="tag" style="background:#fff3e0; color:#b9700a;">Asistentes: ${e.asistentes || 0}</span>
           </div>
           ${e.descripcion ? `<div class="muted" style="margin-top:6px;">${escapeHtml(e.descripcion)}</div>` : ''}
+          ${e.voluntarios?.length ? `<div class="muted" style="margin-top:6px;">🙋 ${e.voluntarios.length} voluntario(s) · ${e.horasEvento||0} hrs c/u</div>` : ''}
         </div>
       </div>
       <div class="item-actions">
